@@ -10,7 +10,18 @@ def generate_launch_description():
     pkg_share = get_package_share_directory(pkg_name)
 
     urdf_file = os.path.join(pkg_share, 'urdf', 'my_robot.urdf.xacro')
-    rviz_config_file = os.path.join(pkg_share, 'rviz', 'lab4.rviz')
+   
+    user_home = os.path.expanduser('~')
+
+    src_config_path = os.path.join(user_home, 'LAB4', 'src', pkg_name, 'rviz', 'config.rviz')
+
+    if os.path.exists(src_config_path):
+        rviz_config_file = src_config_path
+        print(f"\033[92m[INFO] Using Source RViz Config: {rviz_config_file}\033[0m")
+    else:
+        rviz_config_file = os.path.join(pkg_share, 'rviz', 'config.rviz')
+        print(f"\033[93m[WARN] Source config not found. Using Installed RViz Config: {rviz_config_file}\033[0m")
+
 
     robot_desc = Command(['xacro ', urdf_file])
 
@@ -30,7 +41,6 @@ def generate_launch_description():
             arguments=['-d', rviz_config_file]
         ),
 
-
         Node(
             package=pkg_name,
             executable='workspace_node.py', 
@@ -43,7 +53,6 @@ def generate_launch_description():
             name='random_pose',
             output='screen'
         ),
-
 
         Node(
             package=pkg_name,
