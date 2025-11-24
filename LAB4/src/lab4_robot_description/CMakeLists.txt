@@ -53,7 +53,6 @@ install(TARGETS
 install(DIRECTORY
   # add directories here
   rviz
-  config
   urdf
   launch
   DESTINATION share/${PROJECT_NAME})
