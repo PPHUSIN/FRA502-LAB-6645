@@ -39,12 +39,18 @@ sudo apt install ros-humble-desktop-full
 sudo apt install ros-dev-tools
 ```
 
-**4. Build the Package**
+**4. git clone**
+
+```bash
+git clone --branch LAB4 https://github.com/PPHUSIN/FRA502-LAB-6645.git
+```
+
+**5. Build the Package**
 
 Go to your workspace (e.g., ~/LAB4) and build:
 
 ```bash
-cd ~/LAB4
+cd ~/FRA502-LAB-6645/LAB4
 colcon build
 source install/setup.bash
 ```
