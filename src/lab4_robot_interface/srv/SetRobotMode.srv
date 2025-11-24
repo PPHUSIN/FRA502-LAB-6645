@@ -1,0 +1,8 @@
+int8 mode
+geometry_msgs/Pose target_pose
+int8 teleop_frame
+
+---
+bool success
+string message
+float64[] configuration

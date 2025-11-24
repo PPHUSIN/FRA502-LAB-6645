@@ -1,0 +1,122 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="lab4_robot_final_perfect_axis">
+
+  <xacro:property name="h_base"  value="0.20"/> 
+  <xacro:property name="h_link1" value="0.25"/> 
+  <xacro:property name="h_link2" value="0.15"/> 
+  <xacro:property name="h_tip"   value="0.13"/> 
+
+  <xacro:property name="j2_len" value="0.24"/> 
+  <xacro:property name="j3_len" value="0.20"/> 
+  
+  <xacro:property name="radius_main" value="0.04"/>
+  <xacro:property name="radius_joint" value="0.05"/> 
+  <xacro:property name="radius_tip" value="0.02"/>
+
+  <material name="grey"> <color rgba="0.5 0.5 0.5 1"/> </material>
+  <material name="orange"> <color rgba="1.0 0.5 0.0 1"/> </material>
+  <material name="blue"> <color rgba="0.0 0.0 0.8 1"/> </material>
+
+  <link name="world"/>
+
+  <joint name="joint_1" type="revolute">
+    <parent link="world"/>
+    <child link="link_base"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14" upper="3.14" effort="100" velocity="1.0"/>
+  </joint>
+
+  <link name="link_base">
+    <visual>
+      <origin xyz="0 0 ${h_base/2}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="${h_base}" radius="${radius_main}"/>
+      </geometry>
+      <material name="grey"/>
+    </visual>
+    
+    <visual>
+      <origin xyz="0 -0.06 ${h_base}" rpy="${pi/2} 0 0"/>
+      <geometry>
+        <cylinder length="${j2_len}" radius="${radius_joint}"/>
+      </geometry>
+      <material name="orange"/>
+    </visual>
+  </link>
+
+  <joint name="joint_2" type="revolute">
+    <parent link="link_base"/>
+    <child link="link_arm_1"/>
+    <origin xyz="0 -0.12 ${h_base}" rpy="-1.5708 -1.5708 0"/> 
+    <axis xyz="0 0 1"/> <limit lower="-2.0" upper="2.0" effort="100" velocity="1.0"/>
+  </joint>
+
+  <link name="link_arm_1">
+    <visual>
+      <origin xyz="${h_link1/2} 0 0" rpy="0 1.5708 0"/>
+      <geometry>
+        <cylinder length="${h_link1}" radius="${radius_main}"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+
+    <visual>
+      <origin xyz="${h_link1} 0 0.04" rpy="0 0 0"/> <geometry>
+        <cylinder length="${j3_len}" radius="${radius_joint}"/>
+      </geometry>
+      <material name="orange"/>
+    </visual>
+  </link>
+
+  <joint name="joint_3" type="revolute">
+    <parent link="link_arm_1"/>
+    <child link="link_arm_2"/>
+    <origin xyz="${h_link1} 0  0.1" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/> <limit lower="-2.0" upper="2.0" effort="100" velocity="1.0"/>
+  </joint>
+
+  <link name="link_arm_2">
+    <visual>
+      <origin xyz="${h_link2/2} 0 0" rpy="1.5708 0 1.5708"/>
+      <geometry>
+        <cylinder length="${h_link2}" radius="${radius_main}"/>
+      </geometry>
+      <material name="grey"/>
+    </visual>
+
+    <visual>
+      <origin xyz="${h_link2 + h_tip/2} 0 0" rpy="1.5708 0 1.5708"/>
+      <geometry>
+        <cylinder length="${h_tip}" radius="${radius_tip}"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <visual>
+      <origin xyz="${h_link2 + h_tip} 0  0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.01"/>
+      </geometry>
+      <material name="orange"/>
+    </visual>
+  </link>
+  
+  <link name="tip_frame">
+    <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+            <sphere radius="0.01"/> 
+        </geometry>
+        <material name="Red_Marker">
+            <color rgba="1.0 0.0 0.0 1.0"/>
+        </material>
+    </visual>
+  </link>
+  
+  <joint name="tip_fixed" type="fixed">
+    <parent link="link_arm_2"/>
+    <child link="tip_frame"/>
+    <origin xyz="${h_link2 + h_tip} 0 0" rpy="1.5708 0.0 1.5708"/>
+  </joint>
+
+</robot>
