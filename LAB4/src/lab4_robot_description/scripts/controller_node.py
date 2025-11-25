@@ -9,15 +9,27 @@ import roboticstoolbox as rtb
 import numpy as np
 from spatialmath import SE3, UnitQuaternion
 
+import os
+from ament_index_python.packages import get_package_share_directory
+
 class ControllerNode(Node):
     def __init__(self):
         super().__init__('controller_node')
         
-        urdf_path = '/home/ppx/LAB4/src/lab4_robot_description/urdf/my_robot.urdf.xacro'
+        
+        package_name = 'lab4_robot_description' 
+        urdf_file_name = 'my_robot.urdf.xacro'
+
         try:
+            pkg_share = get_package_share_directory(package_name)
+            urdf_path = os.path.join(pkg_share, 'urdf', urdf_file_name)
+            
+            self.get_logger().info(f"Loading URDF from: {urdf_path}") 
             self.robot = rtb.ERobot.URDF(urdf_path)
             self.get_logger().info(f"Loaded: {self.robot.name}")
-        except Exception as e: return
+        except Exception as e:
+            self.get_logger().error(f"Failed to load robot: {e}")
+            return
 
         self.srv = self.create_service(SetRobotMode, 'set_mode', self.handle_set_mode)
         self.auto_client = self.create_client(GetTarget, 'get_random_target')
@@ -44,6 +56,7 @@ class ControllerNode(Node):
         
         self.get_logger().info("Controller Ready!")
 
+    
     def cmd_vel_callback(self, msg): self.target_twist = msg
 
     def handle_set_mode(self, request, response):
