@@ -7,15 +7,25 @@ import struct
 import numpy as np
 import roboticstoolbox as rtb 
 
+import os
+from ament_index_python.packages import get_package_share_directory
+
 class WorkspaceNode(Node):
     def __init__(self):
         super().__init__('workspace_visualizer')
         
-        urdf_path = '/home/ppx/LAB4/src/lab4_robot_description/urdf/my_robot.urdf.xacro' 
+        package_name = 'lab4_robot_description'
+        urdf_file = 'my_robot.urdf.xacro'
+        
         try:
+            pkg_share = get_package_share_directory(package_name)
+            urdf_path = os.path.join(pkg_share, 'urdf', urdf_file)
+            
+            self.get_logger().info(f"Loading URDF from: {urdf_path}")
             self.robot = rtb.ERobot.URDF(urdf_path)
             self.get_logger().info(f'Loaded robot: {self.robot.name}')
         except Exception as e:
+            self.get_logger().error(f"Failed to load robot: {e}")
             return
 
         self.ws_pub = self.create_publisher(PointCloud2, '/workspace_cloud', 10)
