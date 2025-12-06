@@ -1,5 +1,5 @@
 # THRUST VECTORING DRONE
-**FIBO FRA501 – RoboticsDev Final Project 2025**
+**FIBO FRA502 – RoboticsDev Final Project 2025**
 
 **Institute of Field Robotics, King Mongkut's University of Technology Thonburi**
 
