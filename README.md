@@ -1,4 +1,4 @@
-[# THRUST VECTORING DRONE
+# THRUST VECTORING DRONE
 **FIBO FRA502 – RoboticsDev Final Project 2025**
 
 **Institute of Field Robotics, King Mongkut's University of Technology Thonburi**
@@ -16,7 +16,9 @@
 5. [General Information](#-general-information)
 6. [Control System](#-control-system)
 7. [Hardware Design](#-hardware-design)
-8. [ROS2 & MicroROS Implementation](#-ros2--microros-implementation)
+8. [ROS2 Implementation](#-ros2-implementation)
+   - [Simulation Mode](#simulation-mode-gazebo)
+   - [Real Hardware Mode](#real-hardware-mode-esp32--microros)
 9. [Expected Results](#-expected-results)
 10. [Project Timeline](#-project-timeline)
 11. [Installation & Setup](#-installation--setup)
@@ -65,125 +67,56 @@
 - **ระยะเวลาการบิน:** ไม่เกิน 5 นาที
 - **พื้นที่ทดสอบ:** ในห้องปฏิบัติการหรือพื้นที่ปลอดภัย
 
-
-### System Components
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    PC (ROS2 AGENT)                         │
-│  ┌──────────┐              ┌──────────┐                    │
-│  │  RVIZ2   │              │  TELEOP  │                    │
-│  │          │              │          │                    │
-│  │ • Monitor│              │ • Send   │                    │
-│  │ • Display│              │   Commands│                   │
-│  └──────────┘              └──────────┘                    │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                    UDP  │ Wi-Fi Communication
-                         │ (MicroROS Agent)
-                         │
-┌────────────────────────▼────────────────────────────────────┐
-│              ESP32 + MicroROS FIRMWARE                     │
-│                    (DRONE CLIENT)                          │
-│                                                             │
-│  ┌──────────────────┐        ┌─────────────────┐          │
-│  │ COMMAND RECEIVE  │───────▶│    ACTUATORS    │          │
-│  │                  │        │  • ESC          │          │
-│  │ • Topic Subscribe│        │  • Ducted Fan   │          │
-│  │ • Wi-Fi Handler  │        │  • 4x Servos    │          │
-│  └────────┬─────────┘        └─────────────────┘          │
-│           │                                                 │
-│           ▼                                                 │
-│  ┌──────────────────┐        ┌─────────────────┐          │
-│  │ PID CONTROLLER   │        │    SENSORS      │          │
-│  │                  │        │  • IMU          │          │
-│  │ • Attitude Ctrl  │◄───────│  • TOF Sensor   │          │
-│  │ • Position Ctrl  │        │  • Data Fusion  │          │
-│  │ • Thrust Vector  │        └─────────────────┘          │
-│  └──────────────────┘                                      │
-└─────────────────────────────────────────────────────────────┘
-```
-
 ---
 
 ## 🏗️ System Architecture
 
-### Communication Architecture
+### System Overview
+
+โปรเจกต์นี้มี 2 โหมดการทำงาน:
+
+| Mode | Description | Data Source | Use Case |
+|------|-------------|-------------|----------|
+| **🖥️ Simulation** | ทดสอบใน Gazebo | Gazebo Physics Engine | Development & Testing |
+| **🚁 Real Hardware** | บินจริงด้วย ESP32 | ESP32 + MicroROS + Sensors | Real Flight |
+
+### System Components Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                          PC (AGENT)                             │
-│                                                                 │
-│  ┌─────────────────┐              ┌──────────────────┐        │
-│  │     RVIZ2       │              │     TELEOP       │        │
-│  │                 │              │                  │        │
-│  │ Subscribers:    │              │ Publishers:      │        │
-│  │ • /robot_desc   │              │ • /cmd_vel       │        │
-│  │ • /tf           │              │ • /drone/setpoint│        │
-│  │ • /drone/pose   │              │                  │        │
-│  └─────────────────┘              └──────────────────┘        │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                         UDP  │ Wi-Fi (MicroROS Agent)
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    ESP32 + MicroROS (CLIENT)                   │
-│                                                                 │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │              MicroROS NODE                               │  │
-│  │                                                          │  │
-│  │  Publishers:                                            │  │
-│  │  • /drone/pose        (geometry_msgs/Pose)             │  │
-│  │  • /drone/imu         (sensor_msgs/Imu)                │  │
-│  │  • /drone/status      (diagnostic_msgs/Status)         │  │
-│  │                                                          │  │
-│  │  Subscribers:                                           │  │
-│  │  • /cmd_vel           (geometry_msgs/Twist)            │  │
-│  │  • /drone/setpoint    (geometry_msgs/Point)            │  │
-│  └────────────────────┬─────────────────────────────────────┘  │
-│                       │                                         │
-│  ┌────────────────────▼─────────────────────────────────────┐  │
-│  │              FLIGHT CONTROLLER                          │  │
-│  │                                                          │  │
-│  │  • IMU Data Processing                                  │  │
-│  │  • PID Controller (Roll, Pitch, Yaw, Altitude)         │  │
-│  │  • Thrust Vectoring Logic                               │  │
-│  │  • Servo Control (4x Fins)                              │  │
-│  │  • ESC Control (Thrust)                                 │  │
-│  └────────────────────┬─────────────────────────────────────┘  │
-│                       │                                         │
-│  ┌────────────────────▼─────────────────────────────────────┐  │
-│  │              HARDWARE INTERFACE                         │  │
-│  │                                                          │  │
-│  │  • 4x Servo Motors (Fin Control)                        │  │
-│  │  • 1x ESC + Brushless Motor                             │  │
-│  │  • IMU Sensor (MPU6050/BMI088)                          │  │
-│  │  • TOF Distance Sensor                                  │  │
-│  └──────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### System Diagram - Data Flow
-
-```
-┌──────────┐                                      ┌──────────┐
-│  RVIZ2   │◄─────────────────────────────────────│ ESP32    │
-└──────────┘    Show TF, Pose, Status             │ +MicroROS│
-                                                   └──────────┘
-┌──────────┐                                          │
-│  TELEOP  │──────────────────────────────────────►  │
-└──────────┘    Publish /cmd_vel & setpoints         │
-                                                      │
-                                                      ▼
-                                        ┌─────────────────────────┐
-                                        │ PID Controller + Sensors│
-                                        │         ▼               │
-                                        │  • 4x Servo Control     │
-                                        │  • ESC/Motor Control    │
-                                        │  • IMU Data Processing  │
-                                        │  • TOF Altitude         │
-                                        │  • Thrust Vectoring     │
-                                        └─────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                      THRUST VECTORING DRONE SYSTEM                  │
+├─────────────────────────────────┬───────────────────────────────────┤
+│      🖥️ SIMULATION MODE         │      🚁 REAL HARDWARE MODE        │
+│         (Gazebo)                │      (ESP32 + MicroROS)           │
+├─────────────────────────────────┼───────────────────────────────────┤
+│                                 │                                   │
+│  ┌───────────────────────┐     │     ┌───────────────────────┐    │
+│  │   GAZEBO SIMULATION   │     │     │   ESP32 + MicroROS    │    │
+│  │                       │     │     │                       │    │
+│  │  • Physics Engine     │     │     │  • IMU Sensor         │    │
+│  │  • Drone Model        │     │     │  • TOF Sensor         │    │
+│  │  • Environment        │     │     │  • PID Controller     │    │
+│  │                       │     │     │  • Servo Control      │    │
+│  │  Publishers:          │     │     │                       │    │
+│  │  • /odom              │     │     │  Publishers:          │    │
+│  │  • /tf                │     │     │  • /drone/pose        │    │
+│  └───────────┬───────────┘     │     │  • /drone/imu         │    │
+│              │                 │     │  • /drone/status      │    │
+│              ▼                 │     └───────────┬───────────┘    │
+│  ┌───────────────────────┐     │                 │                │
+│  │    PC (ROS2 Nodes)    │     │            UDP  │ Wi-Fi          │
+│  │                       │     │                 ▼                │
+│  │  • drone_pose_node    │     │     ┌───────────────────────┐    │
+│  │  • fin_sim_node       │     │     │    PC (ROS2 Agent)    │    │
+│  │  • teleop_node        │     │     │                       │    │
+│  └───────────┬───────────┘     │     │  • MicroROS Agent     │    │
+│              │                 │     │  • RVIZ2              │    │
+│              ▼                 │     │  • Teleop             │    │
+│  ┌───────────────────────┐     │     └───────────────────────┘    │
+│  │       RVIZ2           │     │                                   │
+│  └───────────────────────┘     │                                   │
+│                                 │                                   │
+└─────────────────────────────────┴───────────────────────────────────┘
 ```
 
 ---
@@ -209,15 +142,6 @@
 | **Altitude Control** | ±5 | cm | Height maintenance accuracy |
 | **Communication** | Low latency | ms | ROS2 ↔ MicroROS stability |
 | **Disturbance Rejection** | Small | - | PID stability under wind |
-
-### Technical Requirements
-
-- **Microcontroller**: ESP32 running MicroROS firmware
-- **Communication**: Wi-Fi Network / Local Network (no UART)
-- **Sensors**: IMU for pitch/roll/yaw measurement
-- **Actuators**: Adjustable angle motors for thrust vectoring
-- **Monitoring**: Real-time status display through Rviz
-- **Safety**: Flight testing in controlled laboratory environment
 
 ---
 
@@ -308,41 +232,6 @@ Kd = Derivative gain
                     └─────────────────┘
 ```
 
-**Thrust Vectoring Principle:**
-- แทนที่การใช้หลายใบพัด ใช้ 4 หูตัดแบบ servomotor ควบคุมทิศทางแรงขับ
-- ลดน้ำหนักและความซับซ้อนของระบบ  
-- เพิ่มประสิทธิภาพในการควบคุมท่าทาง
-
-### Sensor Fusion & State Estimation
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SENSOR PROCESSING                            │
-│                                                                 │
-│  ┌─────────────┐              ┌─────────────┐                  │
-│  │     IMU     │              │ TOF SENSOR  │                  │
-│  │             │              │             │                  │
-│  │ • Roll      │─────────────▶│ • Altitude  │                  │
-│  │ • Pitch     │              │ • Distance  │                  │
-│  │ • Yaw       │              │             │                  │
-│  │ • Accel     │              └─────────────┘                  │
-│  │ • Gyro      │                     │                         │
-│  └─────────────┘                     │                         │
-│         │                            │                         │
-│         ▼                            ▼                         │
-│  ┌─────────────────────────────────────────────────────────┐  │
-│  │              KALMAN FILTER                              │  │
-│  │                                                         │  │
-│  │  • State Estimation                                     │  │
-│  │  • Noise Filtering                                      │  │
-│  │  • Sensor Fusion                                        │  │
-│  └─────────────┬───────────────────────────────────────────┘  │
-└────────────────┼──────────────────────────────────────────────┘
-                 │
-                 ▼
-          To PID Controller
-```
-
 ---
 
 ## 🔧 Hardware Design
@@ -380,89 +269,27 @@ Kd = Derivative gain
 
 ## 🚀 ROS2 Implementation
 
-### ROS2 Nodes
+โปรเจกต์นี้มี 2 โหมดการทำงานที่ใช้ topics และ data flow ที่แตกต่างกัน:
 
-> **หมายเหตุ:** ในการทดสอบปัจจุบัน RVIZ รับข้อมูลทั้งหมดจาก Gazebo Simulation โดย Gazebo จะ publish ข้อมูล `/odom` และ `/tf` ของโดรน ซึ่ง nodes ต่างๆ จะนำไปประมวลผลและแสดงผลใน RVIZ
+---
 
-#### 1. Drone Robot State Publisher
-```python
-# Publishers
-/tf                    # TF transformations
-/robot_description     # URDF model
+### 🖥️ Simulation Mode (Gazebo)
 
-# Subscribers
-/joint_states         # Joint positions from servos
-```
+> **สถานะ:** ใช้งานอยู่ในปัจจุบันสำหรับการพัฒนาและทดสอบ
 
-#### 2. Drone Pose Node
-```python
-# Publishers
-/tf                  # Transform: base_link → body_drone
-                     # (position x, y, z and orientation roll, pitch, yaw)
+ในโหมด Simulation ข้อมูลทั้งหมดมาจาก **Gazebo Physics Engine** โดย RVIZ จะแสดงผลข้อมูลที่ได้จาก simulation
 
-# Subscribers
-/odom                # Odometry data from Gazebo (nav_msgs/Odometry)
-```
-
-#### 3. Fin Angle Node
-```python
-# Publishers
-/fin_states          # Joint states for URDF visualization (sensor_msgs/JointState)
-                     # Joints: fin_1_joint, fin_2_joint, fin_3_joint, fin_4_joint
-
-# Subscribers
-/tf                  # TF transforms to extract fin positions (tf2_msgs/TFMessage)
-```
-
-#### 4. RVIZ2 Node
-```python
-# Subscribers
-/robot_description   # Load drone model
-/tf                  # Display drone position and orientation
-/fin_states          # Display fin joint positions
-```
-
-#### 5. Teleop Node
-```python
-# Publishers
-/drone/velocity_setpoint    # Velocity commands (geometry_msgs/Vector3)
-
-# Controls (เทียบกับ world frame เฉพาะใน simulation):
-#   w : +X (Forward)
-#   s : -X (Backward)
-#   a : +Y (Left)
-#   d : -Y (Right)
-#   space : +Z (Up)
-#   c : -Z (Down)
-#   CTRL-C : Quit
-```
-
-### Topic Summary
-
-| Topic | Message Type | Publisher | Subscriber |
-|-------|-------------|-----------|------------|
-| `/odom` | nav_msgs/Odometry | **Gazebo** | drone_pose_node |
-| `/tf` | tf2_msgs/TFMessage | drone_pose_node, **Gazebo** | fin_pos_listener, RVIZ2 |
-| `/fin_states` | sensor_msgs/JointState | fin_pos_listener | robot_state_publisher |
-| `/drone/velocity_setpoint` | geometry_msgs/Vector3 | teleop_node | **Gazebo**/Controller |
-| `/robot_description` | std_msgs/String | robot_state_publisher | RVIZ2 |
-
-### System Data Flow (Simulation Mode)
+#### Simulation System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        GAZEBO SIMULATION                            │
 │                                                                     │
-│  • Physics Engine                                                   │
-│  • Drone Model                                                      │
-│  • Environment                                                      │
+│  • Physics Engine          • Drone Model        • Environment       │
 │                                                                     │
-│  Publishers:                                                        │
-│  • /odom          (Drone position & velocity)                       │
-│  • /tf            (World transforms)                                │
-│                                                                     │
-│  Subscribers:                                                       │
-│  • /drone/velocity_setpoint  (Control commands)                     │
+│  Publishers:                      Subscribers:                      │
+│  • /odom (position & velocity)    • /drone/velocity_setpoint        │
+│  • /tf (world transforms)                                           │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │
                                 │ ROS2 Topics
@@ -482,42 +309,72 @@ Kd = Derivative gain
 │  │     │       │     │  →body_drone│     │             │          │
 │  └─────┼───────┘     └──────┬──────┘     └──────┬──────┘          │
 │        │                    │                   │                  │
-│        │ To Gazebo          │                   │                  │
-│        ▼                    ▼                   ▼                  │
+│        │ To Gazebo          ▼                   ▼                  │
 │  ┌─────────────────────────────────────────────────────────────┐  │
 │  │                        RVIZ2                                │  │
-│  │                                                             │  │
-│  │  ┌─────────────────────────────────────────────────────┐   │  │
-│  │  │              Visualization                          │   │  │
-│  │  │                                                     │   │  │
-│  │  │  • Drone 3D Model      ← /robot_description         │   │  │
-│  │  │  • Position/Orientation ← /tf (from Gazebo)         │   │  │
-│  │  │  • Fin Angles          ← /fin_states                │   │  │
-│  │  │  • TF Tree             ← /tf                        │   │  │
-│  │  └─────────────────────────────────────────────────────┘   │  │
+│  │  • Drone 3D Model      ← /robot_description                 │  │
+│  │  • Position/Orientation ← /tf (from Gazebo)                 │  │
+│  │  • Fin Angles          ← /fin_states                        │  │
 │  └─────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Data Source Summary
+#### Simulation Nodes
 
-| Data | Source | Description |
-|------|--------|-------------|
-| Drone Position (x, y, z) | Gazebo `/odom` | ตำแหน่งโดรนจาก physics simulation |
-| Drone Orientation (roll, pitch, yaw) | Gazebo `/odom` | ท่าทางโดรนจาก physics simulation |
-| Fin Transforms | Gazebo `/tf` | ตำแหน่ง fins จาก simulation |
-| World Frame | Gazebo | Reference frame สำหรับ visualization |
+##### 1. Drone Pose Node (drone_pose.py)
+```python
+# Publishers
+/tf                  # Transform: base_link → body_drone
 
-### Running Simulation
+# Subscribers
+/odom                # Odometry data from Gazebo (nav_msgs/Odometry)
+```
+
+##### 2. Fin Angle Node (fin_sim.py)
+```python
+# Publishers
+/fin_states          # Joint states (sensor_msgs/JointState)
+                     # Joints: fin_1_joint, fin_2_joint, fin_3_joint, fin_4_joint
+
+# Subscribers
+/tf                  # TF transforms from Gazebo (tf2_msgs/TFMessage)
+```
+
+##### 3. Teleop Node (teleop.py)
+```python
+# Publishers
+/drone/velocity_setpoint    # Velocity commands (geometry_msgs/Vector3)
+
+# Controls (World Frame):
+#   w : +X (Forward)
+#   s : -X (Backward)
+#   a : +Y (Left)
+#   d : -Y (Right)
+#   space : +Z (Up)
+#   c : -Z (Down)
+#   CTRL-C : Quit
+```
+
+#### Simulation Topic Summary
+
+| Topic | Message Type | Publisher | Subscriber |
+|-------|-------------|-----------|------------|
+| `/odom` | nav_msgs/Odometry | **Gazebo** | drone_pose_node |
+| `/tf` | tf2_msgs/TFMessage | drone_pose_node, **Gazebo** | fin_sim_node, RVIZ2 |
+| `/fin_states` | sensor_msgs/JointState | fin_sim_node | robot_state_publisher |
+| `/drone/velocity_setpoint` | geometry_msgs/Vector3 | teleop_node | **Gazebo** |
+| `/robot_description` | std_msgs/String | robot_state_publisher | RVIZ2 |
+
+#### Running Simulation
 
 ```bash
-# Terminal 1: Launch Gazebo simulation (publishes /odom, /tf)
+# Terminal 1: Launch Gazebo simulation
 ros2 launch thrust_vectoring_drone gazebo_launch.py
 
-# Terminal 2: Launch RVIZ2 (receives data from Gazebo via nodes)
+# Terminal 2: Launch RVIZ2
 ros2 launch thrust_vectoring_drone rviz_launch.py
 
-# Terminal 3: Start teleop (sends commands to Gazebo)
+# Terminal 3: Start teleop
 ros2 run thrust_vectoring_drone teleop.py
 
 # Terminal 4: Monitor topics
@@ -525,36 +382,185 @@ ros2 topic echo /odom
 ros2 topic echo /tf
 ```
 
-### ROS2 & MicroROS Integration
+---
+
+### 🚁 Real Hardware Mode (ESP32 + MicroROS)
+
+> **สถานะ:** อยู่ระหว่างการพัฒนา (Week 3-4)
+
+ในโหมด Real Hardware ข้อมูลมาจาก **ESP32 + MicroROS** ที่อ่านค่าจาก sensors จริง (IMU, TOF) และส่งผ่าน Wi-Fi
+
+#### Real Hardware System Architecture
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│              ESP32 + MicroROS NODE                       │
-│                                                          │
-│  Publishers:                                            │
-│  • /drone/pose        (geometry_msgs/Pose)             │
-│  • /drone/imu         (sensor_msgs/Imu)                │
-│  • /drone/status      (diagnostic_msgs/Status)         │
-│                                                          │
-│  Subscribers:                                           │
-│  • /cmd_vel           (geometry_msgs/Twist)            │
-│  • /drone/setpoint    (geometry_msgs/Point)            │
-└────────────────────┬─────────────────────────────────────┘
-                     │
-                UDP  │ Wi-Fi Communication
-                     ▼
-┌──────────────────────────────────────────────────────────┐
-│                 PC ROS2 AGENT                           │
-│                                                          │
-│  Publishers:                                            │
-│  • /cmd_vel           (from teleop)                     │
-│  • /drone/setpoint    (position commands)               │
-│                                                          │
-│  Subscribers:                                           │
-│  • /drone/pose        (for monitoring)                  │
-│  • /drone/imu         (for RVIZ)                        │
-│  • /drone/status      (system health)                   │
-└──────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                    ESP32 + MicroROS (DRONE)                         │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │                    FLIGHT CONTROLLER                         │  │
+│  │                                                              │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │  │
+│  │  │     IMU     │  │ TOF SENSOR  │  │ PID CONTROL │         │  │
+│  │  │  (MPU6050)  │  │             │  │             │         │  │
+│  │  │             │  │ • Altitude  │  │ • Roll      │         │  │
+│  │  │ • Roll      │  │             │  │ • Pitch     │         │  │
+│  │  │ • Pitch     │  └──────┬──────┘  │ • Yaw       │         │  │
+│  │  │ • Yaw       │         │         │ • Altitude  │         │  │
+│  │  └──────┬──────┘         │         └──────┬──────┘         │  │
+│  │         │                │                │                 │  │
+│  │         └────────────────┴────────────────┘                 │  │
+│  │                          │                                   │  │
+│  │                          ▼                                   │  │
+│  │  ┌───────────────────────────────────────────────────────┐  │  │
+│  │  │              MicroROS NODE                            │  │  │
+│  │  │                                                       │  │  │
+│  │  │  Publishers:                                         │  │  │
+│  │  │  • /drone/pose        (geometry_msgs/Pose)          │  │  │
+│  │  │  • /drone/imu         (sensor_msgs/Imu)             │  │  │
+│  │  │  • /drone/status      (diagnostic_msgs/Status)      │  │  │
+│  │  │  • /drone/angle       (std_msgs/Float64MultiArray)  │  │  │
+│  │  │                                                       │  │  │
+│  │  │  Subscribers:                                        │  │  │
+│  │  │  • /cmd_vel           (geometry_msgs/Twist)         │  │  │
+│  │  │  • /drone/setpoint    (geometry_msgs/Point)         │  │  │
+│  │  └───────────────────────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │                    HARDWARE INTERFACE                        │  │
+│  │                                                              │  │
+│  │  • 4x Servo Motors (Fin Control)                            │  │
+│  │  • 1x ESC + Brushless Motor (Thrust)                        │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │
+                           UDP  │ Wi-Fi (MicroROS Agent)
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         PC (ROS2 AGENT)                             │
+│                                                                     │
+│  ┌─────────────────┐     ┌─────────────────┐                       │
+│  │  MicroROS Agent │     │     TELEOP      │                       │
+│  │                 │     │                 │                       │
+│  │ • UDP Bridge    │     │ Pub: /cmd_vel   │                       │
+│  │ • Topic Relay   │     │                 │                       │
+│  └────────┬────────┘     └────────┬────────┘                       │
+│           │                       │                                 │
+│           ▼                       ▼                                 │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │                        RVIZ2                                │  │
+│  │                                                             │  │
+│  │  Subscribers:                                               │  │
+│  │  • /drone/pose       ← Position from ESP32                  │  │
+│  │  • /drone/imu        ← IMU data from ESP32                  │  │
+│  │  • /drone/angle      ← Attitude angles from ESP32           │  │
+│  │  • /robot_description                                       │  │
+│  │  • /tf                                                      │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### Real Hardware Nodes
+
+##### 1. MicroROS Node (ESP32)
+```cpp
+// Publishers (from ESP32 to PC)
+/drone/pose        // geometry_msgs/Pose - Position from sensors
+/drone/imu         // sensor_msgs/Imu - Raw IMU data
+/drone/status      // diagnostic_msgs/Status - System health
+/drone/angle       // std_msgs/Float64MultiArray - [roll, pitch, yaw]
+
+// Subscribers (from PC to ESP32)
+/cmd_vel           // geometry_msgs/Twist - Velocity commands
+/drone/setpoint    // geometry_msgs/Point - Position setpoint
+```
+
+##### 2. Teleop Node (PC)
+```python
+# Publishers
+/cmd_vel                    # Twist messages for drone control
+
+# Alternative: teleop_twist_keyboard
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
+
+##### 3. RVIZ2 (PC)
+```python
+# Subscribers (Real Hardware Mode)
+/drone/pose        # Position from ESP32 (NOT from /odom)
+/drone/imu         # IMU visualization
+/drone/angle       # Attitude display
+/robot_description # URDF model
+/tf                # Transform tree
+```
+
+#### Real Hardware Topic Summary
+
+| Topic | Message Type | Publisher | Subscriber |
+|-------|-------------|-----------|------------|
+| `/drone/pose` | geometry_msgs/Pose | **ESP32** | RVIZ2 |
+| `/drone/imu` | sensor_msgs/Imu | **ESP32** | RVIZ2 |
+| `/drone/angle` | std_msgs/Float64MultiArray | **ESP32** | RVIZ2 |
+| `/drone/status` | diagnostic_msgs/Status | **ESP32** | Monitor |
+| `/cmd_vel` | geometry_msgs/Twist | Teleop | **ESP32** |
+| `/drone/setpoint` | geometry_msgs/Point | PC | **ESP32** |
+
+#### Running Real Hardware
+
+```bash
+# Terminal 1: Start MicroROS Agent
+ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888
+
+# Terminal 2: Launch RVIZ2 (Real Hardware config)
+ros2 launch thrust_vectoring_drone rviz_real_launch.py
+
+# Terminal 3: Start teleop
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+
+# Terminal 4: Monitor drone status
+ros2 topic echo /drone/pose
+ros2 topic echo /drone/imu
+ros2 topic echo /drone/status
+```
+
+---
+
+### 📊 Mode Comparison
+
+| Feature | 🖥️ Simulation | 🚁 Real Hardware |
+|---------|---------------|------------------|
+| **Data Source** | Gazebo Physics | ESP32 Sensors |
+| **Position Topic** | `/odom` | `/drone/pose` |
+| **IMU Data** | Gazebo plugin | `/drone/imu` |
+| **Control Input** | `/drone/velocity_setpoint` | `/cmd_vel` |
+| **Communication** | Local ROS2 | Wi-Fi + MicroROS |
+| **RVIZ Config** | `rviz_launch.py` | `rviz_real_launch.py` |
+| **Use Case** | Development, Testing | Flight Testing |
+
+### Topic Mapping
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    TOPIC COMPARISON                             │
+├─────────────────────────┬───────────────────────────────────────┤
+│   🖥️ SIMULATION         │   🚁 REAL HARDWARE                    │
+├─────────────────────────┼───────────────────────────────────────┤
+│ /odom                   │ /drone/pose                           │
+│ (nav_msgs/Odometry)     │ (geometry_msgs/Pose)                  │
+│ Source: Gazebo          │ Source: ESP32 + IMU + TOF             │
+├─────────────────────────┼───────────────────────────────────────┤
+│ /tf (from Gazebo)       │ /drone/imu                            │
+│                         │ (sensor_msgs/Imu)                     │
+│                         │ Source: ESP32 + MPU6050               │
+├─────────────────────────┼───────────────────────────────────────┤
+│ /drone/velocity_setpoint│ /cmd_vel                              │
+│ (geometry_msgs/Vector3) │ (geometry_msgs/Twist)                 │
+│ To: Gazebo Controller   │ To: ESP32 PID Controller              │
+├─────────────────────────┼───────────────────────────────────────┤
+│ /fin_states             │ /drone/angle                          │
+│ (sensor_msgs/JointState)│ (std_msgs/Float64MultiArray)          │
+│ Source: fin_sim_node    │ Source: ESP32                         │
+└─────────────────────────┴───────────────────────────────────────┘
 ```
 
 ---
@@ -625,12 +631,14 @@ ros2 topic echo /tf
 - Establishing robust WiFi communication
 - Implementing MicroROS topic structure  
 - Testing real-time data exchange reliability
+- **🖥️ Simulation testing in Gazebo**
 
 📋 **Next Steps:**
 1. Complete communication stability testing
 2. Begin PID controller implementation  
 3. Integrate IMU sensor processing
 4. Develop servo control algorithms
+5. **🚁 Transition to real hardware testing**
 
 ---
 
@@ -683,6 +691,9 @@ sudo apt install ros-humble-robot-state-publisher
 sudo apt install ros-humble-joint-state-publisher
 sudo apt install ros-humble-teleop-twist-keyboard
 
+# MicroROS Agent (for real hardware)
+sudo apt install ros-humble-micro-ros-agent
+
 # Python packages
 pip install numpy scipy matplotlib
 pip install pyserial
@@ -706,26 +717,15 @@ colcon build --symlink-install
 source ~/ros2_ws/install/setup.bash
 ```
 
-#### 4. Configure Network
+#### 4. Configure Network (Real Hardware Only)
 
-**On Drone (Client):**
-```bash
-# Edit network config
-sudo nano /etc/netplan/01-netcfg.yaml
-
-# Add WiFi configuration
-network:
-  version: 2
-  wifis:
-    wlan0:
-      dhcp4: no
-      addresses: [192.168.1.100/24]
-      gateway4: 192.168.1.1
-      nameservers:
-        addresses: [8.8.8.8]
-
-# Apply config
-sudo netplan apply
+**On Drone (ESP32 Client):**
+```cpp
+// In ESP32 firmware
+#define WIFI_SSID "your_wifi_ssid"
+#define WIFI_PASSWORD "your_wifi_password"
+#define AGENT_IP "192.168.1.xxx"  // PC IP address
+#define AGENT_PORT 8888
 ```
 
 **On PC (Agent):**
@@ -743,92 +743,86 @@ source ~/.bashrc
 
 ## 🎯 Usage
 
-### Running the System
-
-#### On Drone (Client)
+### 🖥️ Running Simulation Mode
 
 ```bash
-# Terminal 1: Launch drone nodes
-ros2 launch thrust_vectoring_drone drone_launch.py
+# Terminal 1: Launch Gazebo simulation
+ros2 launch thrust_vectoring_drone gazebo_launch.py
 
-# Terminal 2: Start flight controller
-ros2 run thrust_vectoring_drone flight_controller_node
-
-# Terminal 3: Monitor sensors
-ros2 topic echo /drone/pose
-ros2 topic echo /drone/angle
-```
-
-#### On PC (Agent)
-
-```bash
-# Terminal 1: Launch RVIZ2
+# Terminal 2: Launch RVIZ2
 ros2 launch thrust_vectoring_drone rviz_launch.py
 
-# Terminal 2: Start teleop
+# Terminal 3: Start teleop (simulation)
+ros2 run thrust_vectoring_drone teleop.py
+
+# Terminal 4: Monitor topics
+ros2 topic list
+ros2 topic echo /odom
+```
+
+### 🚁 Running Real Hardware Mode
+
+```bash
+# Terminal 1: Start MicroROS Agent
+ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888
+
+# Terminal 2: Launch RVIZ2 (real hardware config)
+ros2 launch thrust_vectoring_drone rviz_real_launch.py
+
+# Terminal 3: Start teleop
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 
-# Terminal 3: Monitor topics
-ros2 topic list
-ros2 topic echo /cmd_vel
+# Terminal 4: Monitor drone
+ros2 topic echo /drone/pose
+ros2 topic echo /drone/imu
+ros2 topic echo /drone/status
 ```
 
 ### Control Commands
 
-**Keyboard Teleoperation:**
+**🖥️ Simulation Teleop (teleop.py):**
 ```
-# Controls:
-#   w : +X (Forward)
-#   s : -X (Backward)
-#   a : +Y (Left)
-#   d : -Y (Right)
-#   space : +Z (Up)
-#   c : -Z (Down)
-#   CTRL-C : Quit
+Moving around (World Frame):
+   w : +X (Forward)
+   s : -X (Backward)
+   a : +Y (Left)
+   d : -Y (Right)
+   space : +Z (Up)
+   c : -Z (Down)
+   CTRL-C : Quit
 ```
 
-**ROS2 Commands:**
+**🚁 Real Hardware Teleop (teleop_twist_keyboard):**
+```
+Moving around:
+   u    i    o
+   j    k    l
+   m    ,    .
+
+q/z : increase/decrease max speeds by 10%
+w/x : increase/decrease only linear speed by 10%
+e/c : increase/decrease only angular speed by 10%
+
+CTRL-C to quit
+```
+
+### ROS2 Commands
 
 ```bash
-# Set velocity
-ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
+# Check available topics
+ros2 topic list
 
-# Check drone status
-ros2 topic echo /drone/pose
-ros2 topic echo /drone/angle
+# Monitor simulation data
+ros2 topic echo /odom                    # Simulation position
+ros2 topic echo /drone/velocity_setpoint # Simulation control
+
+# Monitor real hardware data  
+ros2 topic echo /drone/pose              # Real position
+ros2 topic echo /drone/imu               # Real IMU
+ros2 topic echo /drone/status            # System health
 
 # View TF tree
 ros2 run tf2_tools view_frames
-```
-
-### Gazebo Simulation
-
-```bash
-# Launch Gazebo simulation
-ros2 launch thrust_vectoring_drone gazebo_launch.py
-
-# In another terminal, run controller
-ros2 run thrust_vectoring_drone lqr_controller_node
-
-# Monitor odometry
-ros2 topic echo /odom
-```
-
-### Flight Modes
-
-#### 1. Manual Mode
-```bash
-ros2 service call /drone/set_mode std_srvs/srv/SetBool "{data: false}"
-```
-
-#### 2. Stabilize Mode
-```bash
-ros2 service call /drone/set_mode std_srvs/srv/SetBool "{data: true}"
-```
-
-#### 3. Position Hold
-```bash
-ros2 topic pub /drone/setpoint geometry_msgs/msg/Point "{x: 0.0, y: 0.0, z: 1.0}"
 ```
 
 ---
@@ -873,7 +867,7 @@ ros2 topic pub /drone/setpoint geometry_msgs/msg/Point "{x: 0.0, y: 0.0, z: 1.0}
 
 ## 👥 Team
 
-**FIBO FRA501 – RoboticsDev Final Project 2025**
+**FIBO FRA502 – RoboticsDev Final Project 2025**
 **Institute of Field Robotics, King Mongkut's University of Technology Thonburi**
 
 **Project Members:**
@@ -892,7 +886,7 @@ ros2 topic pub /drone/setpoint geometry_msgs/msg/Point "{x: 0.0, y: 0.0, z: 1.0}
 
 ## 📝 License
 
-This project is developed as part of FIBO FRA501 RoboticsDev coursework.
+This project is developed as part of FIBO FRA502 RoboticsDev coursework.
 Copyright © 2025 by FIBO, KMUTT
 
 ---
@@ -911,7 +905,7 @@ Copyright © 2025 by FIBO, KMUTT
 
 **For questions or collaboration:**
 - **Institution:** Institute of Field Robotics, KMUTT
-- **Course:** FIBO FRA501 – RoboticsDev Final Project 2025
+- **Course:** FIBO FRA502 – RoboticsDev Final Project 2025
 - **Location:** Bangkok, Thailand
 
 **Project Repository:**
@@ -919,9 +913,5 @@ Copyright © 2025 by FIBO, KMUTT
 
 ---
 
-**Project Status:** 🔄 **Week 3 - Development in Progress**  
+**Project Status:** 🔄 **Week 3 - Development in Progress (Simulation Mode)**  
 **Last Updated:** 06 December, 2025
-README (1).md
-README (1).md (41 KB)
-41 KB
-](https://github.com/Pungpond3947/FRA502-LAB-66340500006/tree/Project)
