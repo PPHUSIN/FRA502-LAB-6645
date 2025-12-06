@@ -3,8 +3,11 @@
 **โปรเจกต์: Thrust Vectoring Quadcopter Control System**
 
 รหัสนักศึกษา:
-- 664XXXXXXX
-- 664XXXXXXX
+- 66340500006
+- 66340500027
+- 66340500045
+- 66340500051
+- 66340500074 
 
 โปรเจกต์นี้พัฒนาระบบควบคุม Drone แบบ Thrust Vectoring ที่สามารถปรับทิศทางแรงขับได้ด้วย Servo Motors โดยใช้ระบบควบคุมแบบ PID และ Flight Controller สำหรับการบินที่เสถียร พร้อมระบบควบคุมผ่าน Ground Control Station และการสื่อสารแบบ Wireless
 
