@@ -319,7 +319,7 @@ If you use this simulation in your research, please cite:
 ```
 @misc{tvc_drone_sim_2024,
   title={TVC Drone Simulation with LQR Control},
-  author={Beam},
+  author={Pao},
   institution={King Mongkut's University of Technology Thonburi},
   year={2024},
   note={Robotics and Control Systems Research}
