@@ -382,6 +382,8 @@ Kd = Derivative gain
 
 ### ROS2 Nodes
 
+> **หมายเหตุ:** ในการทดสอบปัจจุบัน RVIZ รับข้อมูลทั้งหมดจาก Gazebo Simulation โดย Gazebo จะ publish ข้อมูล `/odom` และ `/tf` ของโดรน ซึ่ง nodes ต่างๆ จะนำไปประมวลผลและแสดงผลใน RVIZ
+
 #### 1. Drone Robot State Publisher
 ```python
 # Publishers
@@ -395,21 +397,21 @@ Kd = Derivative gain
 #### 2. Drone Pose Node
 ```python
 # Publishers
-/drone/pose          # Current position (x, y, z)
-/drone/angle         # Current attitude (roll, pitch, yaw)
-/fin/angle           # Fin angles [fin1, fin2, fin3, fin4]
+/tf                  # Transform: base_link → body_drone
+                     # (position x, y, z and orientation roll, pitch, yaw)
 
 # Subscribers
-/cmd_vel             # Velocity commands from teleop
+/odom                # Odometry data from Gazebo (nav_msgs/Odometry)
 ```
 
 #### 3. Fin Angle Node
 ```python
 # Publishers
-/joint_states        # Joint states for URDF visualization
+/fin_states          # Joint states for URDF visualization (sensor_msgs/JointState)
+                     # Joints: fin_1_joint, fin_2_joint, fin_3_joint, fin_4_joint
 
 # Subscribers
-/fin/angle           # Desired fin angles from controller
+/tf                  # TF transforms to extract fin positions (tf2_msgs/TFMessage)
 ```
 
 #### 4. RVIZ2 Node
@@ -417,12 +419,110 @@ Kd = Derivative gain
 # Subscribers
 /robot_description   # Load drone model
 /tf                  # Display drone position and orientation
+/fin_states          # Display fin joint positions
 ```
 
 #### 5. Teleop Node
 ```python
 # Publishers
-/cmd_vel             # Twist messages for drone velocity control
+/drone/velocity_setpoint    # Velocity commands (geometry_msgs/Vector3)
+
+# Controls (เทียบกับ world frame เฉพาะใน simulation):
+#   w : +X (Forward)
+#   s : -X (Backward)
+#   a : +Y (Left)
+#   d : -Y (Right)
+#   space : +Z (Up)
+#   c : -Z (Down)
+#   CTRL-C : Quit
+```
+
+### Topic Summary
+
+| Topic | Message Type | Publisher | Subscriber |
+|-------|-------------|-----------|------------|
+| `/odom` | nav_msgs/Odometry | **Gazebo** | drone_pose_node |
+| `/tf` | tf2_msgs/TFMessage | drone_pose_node, **Gazebo** | fin_pos_listener, RVIZ2 |
+| `/fin_states` | sensor_msgs/JointState | fin_pos_listener | robot_state_publisher |
+| `/drone/velocity_setpoint` | geometry_msgs/Vector3 | teleop_node | **Gazebo**/Controller |
+| `/robot_description` | std_msgs/String | robot_state_publisher | RVIZ2 |
+
+### System Data Flow (Simulation Mode)
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        GAZEBO SIMULATION                            │
+│                                                                     │
+│  • Physics Engine                                                   │
+│  • Drone Model                                                      │
+│  • Environment                                                      │
+│                                                                     │
+│  Publishers:                                                        │
+│  • /odom          (Drone position & velocity)                       │
+│  • /tf            (World transforms)                                │
+│                                                                     │
+│  Subscribers:                                                       │
+│  • /drone/velocity_setpoint  (Control commands)                     │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │
+                                │ ROS2 Topics
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         PC (ROS2 NODES)                             │
+│                                                                     │
+│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐          │
+│  │   TELEOP    │     │ DRONE_POSE  │     │  FIN_SIM    │          │
+│  │   NODE      │     │    NODE     │     │    NODE     │          │
+│  │             │     │             │     │             │          │
+│  │ Pub:        │     │ Sub: /odom  │     │ Sub: /tf    │          │
+│  │ /drone/     │     │    (Gazebo) │     │    (Gazebo) │          │
+│  │ velocity_   │     │             │     │             │          │
+│  │ setpoint    │     │ Pub: /tf    │     │ Pub:        │          │
+│  │     │       │     │ (base_link  │     │ /fin_states │          │
+│  │     │       │     │  →body_drone│     │             │          │
+│  └─────┼───────┘     └──────┬──────┘     └──────┬──────┘          │
+│        │                    │                   │                  │
+│        │ To Gazebo          │                   │                  │
+│        ▼                    ▼                   ▼                  │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │                        RVIZ2                                │  │
+│  │                                                             │  │
+│  │  ┌─────────────────────────────────────────────────────┐   │  │
+│  │  │              Visualization                          │   │  │
+│  │  │                                                     │   │  │
+│  │  │  • Drone 3D Model      ← /robot_description         │   │  │
+│  │  │  • Position/Orientation ← /tf (from Gazebo)         │   │  │
+│  │  │  • Fin Angles          ← /fin_states                │   │  │
+│  │  │  • TF Tree             ← /tf                        │   │  │
+│  │  └─────────────────────────────────────────────────────┘   │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Data Source Summary
+
+| Data | Source | Description |
+|------|--------|-------------|
+| Drone Position (x, y, z) | Gazebo `/odom` | ตำแหน่งโดรนจาก physics simulation |
+| Drone Orientation (roll, pitch, yaw) | Gazebo `/odom` | ท่าทางโดรนจาก physics simulation |
+| Fin Transforms | Gazebo `/tf` | ตำแหน่ง fins จาก simulation |
+| World Frame | Gazebo | Reference frame สำหรับ visualization |
+
+### Running Simulation
+
+```bash
+# Terminal 1: Launch Gazebo simulation (publishes /odom, /tf)
+ros2 launch thrust_vectoring_drone gazebo_launch.py
+
+# Terminal 2: Launch RVIZ2 (receives data from Gazebo via nodes)
+ros2 launch thrust_vectoring_drone rviz_launch.py
+
+# Terminal 3: Start teleop (sends commands to Gazebo)
+ros2 run thrust_vectoring_drone teleop.py
+
+# Terminal 4: Monitor topics
+ros2 topic echo /odom
+ros2 topic echo /tf
 ```
 
 ### ROS2 & MicroROS Integration
@@ -677,16 +777,14 @@ ros2 topic echo /cmd_vel
 
 **Keyboard Teleoperation:**
 ```
-Moving around:
-   u    i    o
-   j    k    l
-   m    ,    .
-
-q/z : increase/decrease max speeds by 10%
-w/x : increase/decrease only linear speed by 10%
-e/c : increase/decrease only angular speed by 10%
-
-CTRL-C to quit
+# Controls:
+#   w : +X (Forward)
+#   s : -X (Backward)
+#   a : +Y (Left)
+#   d : -Y (Right)
+#   space : +Z (Up)
+#   c : -Z (Down)
+#   CTRL-C : Quit
 ```
 
 **ROS2 Commands:**
