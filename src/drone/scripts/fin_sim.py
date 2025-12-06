@@ -28,21 +28,12 @@ class FinAngleNode(Node):
             
             if child_frame in self.fin_values:
                 
-                # 1. ดึงค่า Position (Translation)
                 tx = t.transform.translation.x
                 ty = t.transform.translation.y
                 tz = t.transform.translation.z
-                
-                # --- เลือกวิธีแปลงตามที่คุณต้องการ (เลือกข้อ A หรือ B) ---
 
-                # [แบบ A] ใช้ค่าแกน Z ตรงๆ (เช่น ลิฟต์ หรือ ครีบที่ยืดหดได้)
-                # value = tz 
-
-                # [แบบ B] คำนวณ "มุม" จากพิกัด X, Y (ใช้ atan2)
-                # เหมาะสำหรับหาว่าวัตถุอยู่มุมไหนเมื่อเทียบกับจุดศูนย์กลาง
                 value = math.atan2(ty, tx) 
 
-                # อัปเดตค่า
                 self.fin_values[child_frame] = value
                 updated = True
 

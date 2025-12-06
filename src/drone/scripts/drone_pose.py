@@ -15,9 +15,9 @@ class DroneBridgeNode(Node):
 
         self.tf_broadcaster = TransformBroadcaster(self)
 
-        self.create_subscription(Float64MultiArray, '/drone/angle', self.angle_callback, 10)
+        # self.create_subscription(Float64MultiArray, '/drone/angle', self.angle_callback, 10)
         # self.create_subscription(Twist, "/drone_velo", self.Drone_Velo_callback, 10)
-        self.create_subscription(Twist, "/cmd_vel", self.Drone_Velo_callback, 10)
+        # self.create_subscription(Twist, "/cmd_vel", self.Drone_Velo_callback, 10)
         self.create_subscription(Odometry, "/odom", self.drone_pose_callback, 10)
         
         self.get_logger().info('Drone Pose Started! Waiting for data from /drone/pose ...')
@@ -40,38 +40,41 @@ class DroneBridgeNode(Node):
 
         self.timer = self.create_timer(0.01, self.pub_timer)
 
-        self.dt = 0.01
+        # self.dt = 0.01
 
     def drone_pose_callback(self, msg):
-        # self.get_logger().info(f"pose z : {self.z}")
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y
         self.z = msg.pose.pose.position.z
 
-    def Drone_Velo_callback(self, msg):
-        self.vx = msg.linear.x
-        self.vy = msg.linear.y
-        self.vz = msg.linear.z
+        self.roll = msg.twist.twist.angular.x
+        self.pitch = msg.twist.twist.angular.y
+        self.yaw = msg.twist.twist.angular.z
 
-        # self.roll = msg.angular.x
-        # self.pitch = msg.angular.y
-        # self.yaw = msg.angular.z
+    # def Drone_Velo_callback(self, msg):
+    #     self.vx = msg.linear.x
+    #     self.vy = msg.linear.y
+    #     self.vz = msg.linear.z
 
-    def cal_pose(self):
-        self.x += self.vx * self.dt
-        self.y += self.vy * self.dt
-        self.z += self.vz * self.dt
+    #     self.roll = msg.angular.x
+    #     self.pitch = msg.angular.y
+    #     self.yaw = msg.angular.z
 
-        # self.rx += self.roll * self.dt
-        # self.ry += self.pitch * self.dt
-        # self.rz += self.yaw * self.dt
+    # def cal_pose(self):
+    #     self.x += self.vx * self.dt
+    #     self.y += self.vy * self.dt
+    #     self.z += self.vz * self.dt
 
-        self.pub_tf()
+    #     self.rx += self.roll * self.dt
+    #     self.ry += self.pitch * self.dt
+    #     self.rz += self.yaw * self.dt
 
-    def angle_callback(self, msg):
-        self.roll = msg.data[0]
-        self.pitch = msg.data[1]
-        self.yaw = msg.data[2]
+    #     self.pub_tf()
+
+    # def angle_callback(self, msg):
+    #     self.roll = msg.data[0]
+    #     self.pitch = msg.data[1]
+    #     self.yaw = msg.data[2]
 
     def pub_tf(self):
 
@@ -112,8 +115,8 @@ class DroneBridgeNode(Node):
     #     self.tf_broadcaster.sendTransform(t)
 
     def pub_timer(self):
-        # self.pub_tf()
-        self.cal_pose()
+        self.pub_tf()
+        # self.cal_pose()
 
 def main(args=None):
     rclpy.init(args=args)

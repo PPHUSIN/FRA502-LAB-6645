@@ -58,18 +58,18 @@ def generate_launch_description():
         output="screen"
     )
 
-    # fin_sim_node = Node(
-    #     package=pkg_name,
-    #     executable="fin_sim.py",
-    #     name='fin_sim_node',
-    #     output="screen"
-    # )
+    fin_sim_node = Node(
+        package=pkg_name,
+        executable="fin_sim.py",
+        name='fin_sim_node',
+        output="screen"
+    )
 
     return LaunchDescription([
         joint_state_pub,
         robot_state_pub,
         rviz,
         drone_pose_node,
-        # fin_sim_node
-        fin_angle_node
+        fin_sim_node
+        # fin_angle_node
     ])
