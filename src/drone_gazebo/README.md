@@ -309,42 +309,6 @@ ros2 topic echo /drone/thrust
 ros2 topic echo /drone/control_status
 ```
 
-## Research Applications
-
-This simulation platform supports research in:
-
-- **Novel Actuation Methods**: Alternative to multi-rotor speed control
-- **Coupled Control Systems**: Aerodynamic coupling between control axes
-- **LQR Controller Design**: Multi-objective optimal control
-- **Trajectory Optimization**: For aerodynamically actuated vehicles
-- **Fault-Tolerant Control**: Fin failure scenarios and reconfiguration
-- **Bio-Inspired Flight**: Similar to bird/insect control surfaces
-
-## Future Enhancements
-
-### Planned Features
-- [ ] Adaptive control for varying aerodynamic conditions
-- [ ] Wind disturbance modeling and rejection
-- [ ] Formation flight capabilities
-- [ ] Hardware-in-the-loop integration
-- [ ] Machine learning-based controller adaptation
-- [ ] Non-linear trajectory optimization
-
-### Hardware Implementation
-This simulation is designed to facilitate eventual hardware implementation:
-- STM32-compatible control algorithms
-- CAN bus integration ready
-- Real-time control system architecture
-- Sensor fusion preparation (IMU, LiDAR, GPS)
-
-## Contributing
-
-Beam's research focuses on advanced control systems and robotics. Contributions are welcome in:
-- Control algorithm improvements
-- Simulation fidelity enhancements  
-- Hardware integration
-- Documentation and tutorials
-
 ## License
 
 This project is part of ongoing robotics research at King Mongkut's University of Technology Thonburi (KMUTT).
