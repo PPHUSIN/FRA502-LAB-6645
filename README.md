@@ -1,57 +1,105 @@
 # THRUST VECTORING DRONE
-**ROS2 PROJECT**
+**FIBO FRA501 – RoboticsDev Final Project 2025**
 
-02 DEC, 2025
+**Institute of Field Robotics, King Mongkut's University of Technology Thonburi**
+
+06 DEC, 2025
 
 ---
 
 ## 📋 สารบัญ
 
 1. [Overview](#-overview)
-2. [System Architecture](#-system-architecture)
-3. [General Information](#-general-information)
-4. [Control System](#-control-system)
-5. [Hardware Design](#-hardware-design)
-6. [ROS2 Implementation](#-ros2-implementation)
-7. [Testing & Results](#-testing--results)
-8. [Installation & Setup](#-installation--setup)
-9. [Usage](#-usage)
+2. [Project Objectives](#-project-objectives)
+3. [Project Scope & Constraints](#-project-scope--constraints)
+4. [System Architecture](#-system-architecture)
+5. [General Information](#-general-information)
+6. [Control System](#-control-system)
+7. [Hardware Design](#-hardware-design)
+8. [ROS2 & MicroROS Implementation](#-ros2--microros-implementation)
+9. [Expected Results](#-expected-results)
+10. [Project Timeline](#-project-timeline)
+11. [Installation & Setup](#-installation--setup)
+12. [Usage](#-usage)
 
 ---
 
 ## 🎯 Overview
 
-โปรเจกต์นี้พัฒนาระบบ **Thrust Vectoring Drone** โดยใช้ ROS2 เป็น framework หลักในการควบคุมและสื่อสาร ระหว่าง Ground Station (PC) และ Drone ผ่านระบบ WiFi
+โครงงานนี้มีวัตถุประสงค์เพื่อพัฒนา **Thrust Vectoring Drone** (โดรนแบบควบคุมทิศทางแรงขับ) ซึ่งสามารถควบคุมทิศทางของแรงขับเพื่อการทรงตัวและเคลื่อนที่ได้อย่างอิสระ โดยใช้ระบบ **ROS2** ร่วมกับ **MicroROS** เพื่อเชื่อมต่อการสื่อสารระหว่างคอมพิวเตอร์และไมโครคอนโทรลเลอร์ในแบบเรียลไทม์
+
+ระบบถูกออกแบบให้ฝั่งคอมพิวเตอร์ทำหน้าที่ส่งคำสั่งควบคุม (การขึ้นบิน, การเปลี่ยนทิศทาง, หรือการหยุดการทำงาน) ผ่าน Topic ส่วนฝั่งไมโครคอนโทรลเลอร์จะทำหน้าที่ประมวลผลทั้งหมด ได้แก่ การอ่านค่าจากเซนเซอร์ IMU, การคำนวณท่าทาง, และการควบคุมทิศทางของแรงขับด้วย PID Controller
+
+**คำสำคัญ:** ROS2, MicroROS, Monorotor Drone, PID Controller, Real-Time Communication
+
+---
+
+## 🎯 Project Objectives
+
+1. **เพื่อพัฒนาโดรนใบพัดเดียวที่ควบคุมด้วย Thrust Vectoring ได้อย่างเสถียร**
+   - ใช้การปรับมุมเอียงของมอเตอร์เพื่อควบคุมทิศทางแรงขับแทนการเพิ่มจำนวนใบพัด
+   - ช่วยลดน้ำหนักและความซับซ้อนของโครงสร้างโดรน
+
+2. **เพื่อเชื่อมต่อระบบ ROS2 และ MicroROS สำหรับการสื่อสารและสั่งงานแบบเรียลไทม์ผ่าน Wi-Fi**
+   - การสื่อสารผ่านอินเทอร์เน็ตโดยใช้ MicroROS Agent
+   - ระบบทำงานแบบเรียลไทม์
+
+3. **เพื่อศึกษาความสามารถในการทรงตัว การตอบสนองต่อคำสั่ง และความเป็นไปได้ในการต่อยอดสู่การควบคุมแบบอัตโนมัติในอนาคต**
+
+---
+
+## 📋 Project Scope & Constraints
+
+### ขอบเขตโครงการ
+
+1. ใช้ **ROS2** สำหรับส่งคำสั่งควบคุมการบิน
+2. ใช้ไมโครคอนโทรลเลอร์ **ESP32** ที่รัน **MicroROS** ในการควบคุม PID และการรักษาสมดุล
+3. ระบบสื่อสารผ่าน **Wi-Fi Network / Local Network** โดยไม่ใช้ UART
+4. ใช้ **IMU** ในการวัด pitch, roll, yaw ของโดรน
+5. ใช้มอเตอร์ที่ปรับมุมเอียงได้ เพื่อสร้างการควบคุมแบบ **Thrust Vectoring**
+6. แสดงผลและตรวจสอบสถานะโดรนผ่าน **Rviz**
+
+### ข้อจำกัดการใช้งาน
+
+- **ความสูงการบิน:** ไม่เกิน 4 เมตร
+- **ระยะเวลาการบิน:** ไม่เกิน 5 นาที
+- **พื้นที่ทดสอบ:** ในห้องปฏิบัติการหรือพื้นที่ปลอดภัย
+
 
 ### System Components
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      PC (AGENT)                             │
+│                    PC (ROS2 AGENT)                         │
 │  ┌──────────┐              ┌──────────┐                    │
 │  │  RVIZ2   │              │  TELEOP  │                    │
+│  │          │              │          │                    │
+│  │ • Monitor│              │ • Send   │                    │
+│  │ • Display│              │   Commands│                   │
 │  └──────────┘              └──────────┘                    │
 └────────────────────────┬────────────────────────────────────┘
                          │
-                    WiFi │ Communication
+                    UDP  │ Wi-Fi Communication
+                         │ (MicroROS Agent)
                          │
 ┌────────────────────────▼────────────────────────────────────┐
-│                   DRONE (CLIENT)                            │
+│              ESP32 + MicroROS FIRMWARE                     │
+│                    (DRONE CLIENT)                          │
 │                                                             │
 │  ┌──────────────────┐        ┌─────────────────┐          │
-│  │ FLIGHT CONTROLLER│───────▶│    ACTUATORS    │          │
-│  │                  │        │  - ESC          │          │
-│  │  - Control Logic │        │  - Ducted Fan   │          │
-│  │  - LQR + Kalman  │        │  - 4x Servos    │          │
+│  │ COMMAND RECEIVE  │───────▶│    ACTUATORS    │          │
+│  │                  │        │  • ESC          │          │
+│  │ • Topic Subscribe│        │  • Ducted Fan   │          │
+│  │ • Wi-Fi Handler  │        │  • 4x Servos    │          │
 │  └────────┬─────────┘        └─────────────────┘          │
 │           │                                                 │
 │           ▼                                                 │
 │  ┌──────────────────┐        ┌─────────────────┐          │
-│  │     SENSORS      │        │ POWER SYSTEM    │          │
-│  │  - IMU           │        │  - Battery      │          │
-│  │  - GPS           │        │  - Regulator    │          │
-│  │  - TOF Sensor    │        └─────────────────┘          │
-│  │  - OLED Display  │                                      │
+│  │ PID CONTROLLER   │        │    SENSORS      │          │
+│  │                  │        │  • IMU          │          │
+│  │ • Attitude Ctrl  │◄───────│  • TOF Sensor   │          │
+│  │ • Position Ctrl  │        │  • Data Fusion  │          │
+│  │ • Thrust Vector  │        └─────────────────┘          │
 │  └──────────────────┘                                      │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -60,7 +108,7 @@
 
 ## 🏗️ System Architecture
 
-### ROS2 Node Diagram
+### Communication Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -71,46 +119,46 @@
 │  │                 │              │                  │        │
 │  │ Subscribers:    │              │ Publishers:      │        │
 │  │ • /robot_desc   │              │ • /cmd_vel       │        │
-│  │ • /tf           │              │                  │        │
+│  │ • /tf           │              │ • /drone/setpoint│        │
+│  │ • /drone/pose   │              │                  │        │
 │  └─────────────────┘              └──────────────────┘        │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                         WiFi │
+                         UDP  │ Wi-Fi (MicroROS Agent)
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                         DRONE (CLIENT)                          │
+│                    ESP32 + MicroROS (CLIENT)                   │
 │                                                                 │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │         DRONE ROBOT STATE PUBLISHER                      │  │
+│  │              MicroROS NODE                               │  │
 │  │                                                          │  │
 │  │  Publishers:                                            │  │
-│  │  • /tf                                                  │  │
-│  │  • /robot_description                                   │  │
+│  │  • /drone/pose        (geometry_msgs/Pose)             │  │
+│  │  • /drone/imu         (sensor_msgs/Imu)                │  │
+│  │  • /drone/status      (diagnostic_msgs/Status)         │  │
 │  │                                                          │  │
 │  │  Subscribers:                                           │  │
-│  │  • /joint_states                                        │  │
+│  │  • /cmd_vel           (geometry_msgs/Twist)            │  │
+│  │  • /drone/setpoint    (geometry_msgs/Point)            │  │
 │  └────────────────────┬─────────────────────────────────────┘  │
 │                       │                                         │
 │  ┌────────────────────▼─────────────────────────────────────┐  │
-│  │              DRONE POSE NODE                            │  │
+│  │              FLIGHT CONTROLLER                          │  │
 │  │                                                          │  │
-│  │  Publishers:                                            │  │
-│  │  • /drone/pose                                          │  │
-│  │  • /drone/angle                                         │  │
-│  │  • /fin/angle                                           │  │
-│  │                                                          │  │
-│  │  Subscribers:                                           │  │
-│  │  • /cmd_vel                                             │  │
+│  │  • IMU Data Processing                                  │  │
+│  │  • PID Controller (Roll, Pitch, Yaw, Altitude)         │  │
+│  │  • Thrust Vectoring Logic                               │  │
+│  │  • Servo Control (4x Fins)                              │  │
+│  │  • ESC Control (Thrust)                                 │  │
 │  └────────────────────┬─────────────────────────────────────┘  │
 │                       │                                         │
 │  ┌────────────────────▼─────────────────────────────────────┐  │
-│  │              FIN ANGLE NODE                             │  │
+│  │              HARDWARE INTERFACE                         │  │
 │  │                                                          │  │
-│  │  Publishers:                                            │  │
-│  │  • /joint_states                                        │  │
-│  │                                                          │  │
-│  │  Subscribers:                                           │  │
-│  │  • /fin/angle                                           │  │
+│  │  • 4x Servo Motors (Fin Control)                        │  │
+│  │  • 1x ESC + Brushless Motor                             │  │
+│  │  • IMU Sensor (MPU6050/BMI088)                          │  │
+│  │  • TOF Distance Sensor                                  │  │
 │  └──────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -119,24 +167,22 @@
 
 ```
 ┌──────────┐                                      ┌──────────┐
-│  RVIZ2   │◄─────────────────────────────────────│  DRONE   │
-└──────────┘         Show TF of drone            └──────────┘
-                                                       │
+│  RVIZ2   │◄─────────────────────────────────────│ ESP32    │
+└──────────┘    Show TF, Pose, Status             │ +MicroROS│
+                                                   └──────────┘
 ┌──────────┐                                          │
 │  TELEOP  │──────────────────────────────────────►  │
-└──────────┘    Publish /cmd_vel for velocity        │
+└──────────┘    Publish /cmd_vel & setpoints         │
                                                       │
                                                       ▼
                                         ┌─────────────────────────┐
-                                        │  Speed Control → ESC    │
+                                        │ PID Controller + Sensors│
                                         │         ▼               │
-                                        │    Ducted Fan           │
-                                        │                         │
-                                        │  Sensors:               │
-                                        │  • IMU                  │
-                                        │  • GPS                  │
-                                        │  • OLED                 │
-                                        │  • TOF Sensor           │
+                                        │  • 4x Servo Control     │
+                                        │  • ESC/Motor Control    │
+                                        │  • IMU Data Processing  │
+                                        │  • TOF Altitude         │
+                                        │  • Thrust Vectoring     │
                                         └─────────────────────────┘
 ```
 
@@ -144,103 +190,157 @@
 
 ## 📊 General Information
 
-### Specifications
+### Project Specifications
 
-| Parameter | Value | Unit |
-|-----------|-------|------|
-| **Takeoff Weight** | 707 | g |
-| **Max Thrust** | 1250 | g |
-| **T/W Ratio** | 1.79 | - |
-| **Flight Time** | 5 | minutes |
-| **Dimensions** | 100 x 100 x 160 | mm |
+| Parameter | Value | Unit | Notes |
+|-----------|-------|------|-------|
+| **Platform** | ESP32 + MicroROS | - | Embedded flight controller |
+| **Communication** | Wi-Fi/UDP | - | Real-time MicroROS Agent |
+| **Flight Altitude** | ≤ 4 | meters | Safety constraint |
+| **Flight Duration** | ≤ 5 | minutes | Battery limitation |
+| **Control Type** | Thrust Vectoring | - | Single propeller + 4 fins |
+| **Sensors** | IMU + TOF | - | Attitude + altitude sensing |
 
-### Performance Characteristics
+### Performance Targets
 
-- **Thrust-to-Weight Ratio**: 1.79 (excellent maneuverability)
-- **Endurance**: 5 minutes flight time
-- **Compact Design**: 100mm x 100mm footprint
-- **Control**: 4-fin thrust vectoring system
+| Parameter | Target Accuracy | Unit | Description |
+|-----------|----------------|------|-------------|
+| **Attitude Control** | ±10 | degrees | Roll, Pitch, Yaw precision |
+| **Altitude Control** | ±5 | cm | Height maintenance accuracy |
+| **Communication** | Low latency | ms | ROS2 ↔ MicroROS stability |
+| **Disturbance Rejection** | Small | - | PID stability under wind |
+
+### Technical Requirements
+
+- **Microcontroller**: ESP32 running MicroROS firmware
+- **Communication**: Wi-Fi Network / Local Network (no UART)
+- **Sensors**: IMU for pitch/roll/yaw measurement
+- **Actuators**: Adjustable angle motors for thrust vectoring
+- **Monitoring**: Real-time status display through Rviz
+- **Safety**: Flight testing in controlled laboratory environment
 
 ---
 
 ## 🎮 Control System
 
-### LQR Controller
+### PID Controller Architecture
 
-ระบบใช้ **Linear Quadratic Regulator (LQR)** สำหรับการควบคุมการบินที่เหมาะสมที่สุด
+ระบบใช้ **PID Controller** สำหรับการควบคุมการบินที่เสถียรและแม่นยำ โดย ESP32 ทำหน้าที่ประมวลผล PID แบบเรียลไทม์
 
 ```
 ┌─────────┐    ┌──────────┐    ┌────────────────┐    ┌─────────┐
-│  Target │───▶│   LQR    │───▶│ SERVO +        │───▶│ Output  │
-│ Altitude│    │          │    │ THRUSTER       │    │ [4 fin  │
-└─────────┘    │          │    │ CONTROLLER     │    │+ thrust]│
+│ Target  │───▶│   PID    │───▶│ SERVO +        │───▶│ Output  │
+│Setpoint │    │Controller│    │ THRUSTER       │    │ [4 fins │
+│(ROS2)   │    │(ESP32)   │    │ CONTROLLER     │    │+ thrust]│
+└─────────┘    │          │    │                │    │         │
                └────▲─────┘    └────────────────┘    └─────────┘
                     │
                ┌────┴─────┐
                │   IMU    │
                │   TOF    │
-               │ Velocity │
+               │ Feedback │
                └──────────┘
                
-Input: roll, pitch, yaw, altitude
+Input: roll, pitch, yaw, altitude setpoints (via ROS2)
 Output: 4 fin angles + thruster speed
 ```
 
-**State Space Model:**
+### PID Controller Implementation
 
-อ้างอิง: [Master Thesis - Emil Jacobsen](https://vbn.aau.dk/ws/files/421577367/Master_Thesis_Emil_Jacobsen_v5.pdf)
+**Multi-loop PID Structure:**
 
 ```
-ẋ = Ax + Bu
-y = Cx + Du
+┌─────────────────────────────────────────────────────────────────┐
+│                    ESP32 PID CONTROLLER                        │
+│                                                                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │  ROLL PID   │  │ PITCH PID   │  │  YAW PID    │            │
+│  │             │  │             │  │             │            │
+│  │ Kp, Ki, Kd  │  │ Kp, Ki, Kd  │  │ Kp, Ki, Kd  │            │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘            │
+│         │                │                │                    │
+│  ┌──────▼──────┐  ┌──────▼──────┐  ┌──────▼──────┐            │
+│  │   FIN 1     │  │   FIN 2     │  │   FIN 3     │            │
+│  │   SERVO     │  │   SERVO     │  │   SERVO     │            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+│                                                                 │
+│  ┌─────────────┐                  ┌─────────────┐            │
+│  │ALTITUDE PID │                  │   FIN 4     │            │
+│  │             │                  │   SERVO     │            │
+│  │ Kp, Ki, Kd  │─────────────────▶│             │            │
+│  └─────────────┘                  └─────────────┘            │
+│         │                                                     │
+│  ┌──────▼──────┐                                              │
+│  │  THRUSTER   │                                              │
+│  │    ESC      │                                              │
+│  └─────────────┘                                              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**PID Equations:**
+
+```
+u(t) = Kp * e(t) + Ki * ∫e(t)dt + Kd * de(t)/dt
 
 Where:
-x = [x, y, z, φ, θ, ψ, ẋ, ẏ, ż, φ̇, θ̇, ψ̇]ᵀ
-u = [fin1, fin2, fin3, fin4, thrust]ᵀ
+e(t) = setpoint - measurement
+Kp = Proportional gain
+Ki = Integral gain  
+Kd = Derivative gain
 ```
 
-### Kalman Filter
+### Thrust Vectoring Logic
 
-ใช้ **Kalman Filter** สำหรับการประมาณค่า state ที่แม่นยำ
+**การควบคุมทิศทางแรงขับ:**
 
 ```
-┌────────────────────────────────────────┐
-│         KALMAN FILTER                  │
-│                                        │
-│  ┌──────────────┐  ┌────────────────┐ │
-│  │   PREDICT    │  │  MEASUREMENT   │ │
-│  │              │  │     UPDATE     │ │
-│  │ Extrapolate  │─▶│  Update state  │ │
-│  │  the state   │  │with measurement│ │
-│  └──────────────┘  └────────────────┘ │
-└────────────────────────────────────────┘
-
-Combined System:
-┌─────────┐    ┌─────────┐    ┌──────────┐    ┌─────────┐
-│  Target │───▶│ KALMAN  │───▶│   LQR    │───▶│ SERVO + │
-│Altitude │    │         │    │          │    │THRUSTER │
-└─────────┘    └────▲────┘    └──────────┘    └─────────┘
-                    │
-               ┌────┴─────┐
-               │   IMU    │
-               │   TOF    │
-               │ Velocity │
-               └──────────┘
+                    ┌─────────────────┐
+                    │  THRUST VECTOR  │
+                    │    CONTROL      │
+                    │                 │
+         Roll   ────┤                 ├──── Fin 1 Angle
+         Pitch  ────┤  ESP32 + PID    ├──── Fin 2 Angle  
+         Yaw    ────┤                 ├──── Fin 3 Angle
+         Alt    ────┤                 ├──── Fin 4 Angle
+                    │                 │
+         IMU    ────┤                 ├──── Thrust Level
+         TOF    ────┤                 │
+                    └─────────────────┘
 ```
 
-**Kalman Filter Equations:**
+**Thrust Vectoring Principle:**
+- แทนที่การใช้หลายใบพัด ใช้ 4 หูตัดแบบ servomotor ควบคุมทิศทางแรงขับ
+- ลดน้ำหนักและความซับซ้อนของระบบ  
+- เพิ่มประสิทธิภาพในการควบคุมท่าทาง
 
-Prediction Step:
-```
-x̂ₖ⁻ = Aₖ₋₁x̂ₖ₋₁ + Bₖ₋₁uₖ₋₁
-Pₖ⁻ = Aₖ₋₁Pₖ₋₁Aₖ₋₁ᵀ + Qₖ₋₁
-```
+### Sensor Fusion & State Estimation
 
-Update Step:
 ```
-Kₖ = Pₖ⁻Hₖᵀ(HₖPₖ⁻Hₖᵀ + Rₖ)⁻¹
-x̂ₖ = x̂ₖ⁻ + Kₖ(zₖ - Hₖx̂ₖ⁻)
-Pₖ = (I - KₖHₖ)Pₖ⁻
+┌─────────────────────────────────────────────────────────────────┐
+│                    SENSOR PROCESSING                            │
+│                                                                 │
+│  ┌─────────────┐              ┌─────────────┐                  │
+│  │     IMU     │              │ TOF SENSOR  │                  │
+│  │             │              │             │                  │
+│  │ • Roll      │─────────────▶│ • Altitude  │                  │
+│  │ • Pitch     │              │ • Distance  │                  │
+│  │ • Yaw       │              │             │                  │
+│  │ • Accel     │              └─────────────┘                  │
+│  │ • Gyro      │                     │                         │
+│  └─────────────┘                     │                         │
+│         │                            │                         │
+│         ▼                            ▼                         │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │              KALMAN FILTER                              │  │
+│  │                                                         │  │
+│  │  • State Estimation                                     │  │
+│  │  • Noise Filtering                                      │  │
+│  │  • Sensor Fusion                                        │  │
+│  └─────────────┬───────────────────────────────────────────┘  │
+└────────────────┼──────────────────────────────────────────────┘
+                 │
+                 ▼
+          To PID Controller
 ```
 
 ---
@@ -325,92 +425,112 @@ Pₖ = (I - KₖHₖ)Pₖ⁻
 /cmd_vel             # Twist messages for drone velocity control
 ```
 
-### System Architecture (Gazebo Simulation)
+### ROS2 & MicroROS Integration
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│              LQR CONTROLLER                              │
+│              ESP32 + MicroROS NODE                       │
 │                                                          │
 │  Publishers:                                            │
-│  • /drone/fin/position                                  │
-│  • /drone/cmd_thrust                                    │
+│  • /drone/pose        (geometry_msgs/Pose)             │
+│  • /drone/imu         (sensor_msgs/Imu)                │
+│  • /drone/status      (diagnostic_msgs/Status)         │
 │                                                          │
 │  Subscribers:                                           │
-│  • /drone/control_mode                                  │
-│  • /drone/setpoint                                      │
-│  • /drone/velocity_setpoint                             │
-│  • /odom                                                │
+│  • /cmd_vel           (geometry_msgs/Twist)            │
+│  • /drone/setpoint    (geometry_msgs/Point)            │
 └────────────────────┬─────────────────────────────────────┘
                      │
+                UDP  │ Wi-Fi Communication
                      ▼
 ┌──────────────────────────────────────────────────────────┐
-│              TVC CONTROLLER                              │
+│                 PC ROS2 AGENT                           │
 │                                                          │
 │  Publishers:                                            │
-│  • /drone/thrust                                        │
+│  • /cmd_vel           (from teleop)                     │
+│  • /drone/setpoint    (position commands)               │
 │                                                          │
 │  Subscribers:                                           │
-│  • /drone/fin/position                                  │
-│  • /drone/cmd_thrust                                    │
-└────────────────────┬─────────────────────────────────────┘
-                     │
-                     ▼
-┌──────────────────────────────────────────────────────────┐
-│                   GAZEBO                                 │
-│                                                          │
-│  Publishers:                                            │
-│  • /odom                                                │
-│                                                          │
-│  Subscribers:                                           │
-│  • /drone/thrust                                        │
+│  • /drone/pose        (for monitoring)                  │
+│  • /drone/imu         (for RVIZ)                        │
+│  • /drone/status      (system health)                   │
 └──────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🧪 Testing & Results
+## 🎯 Expected Results
 
-### Test Configurations
+### Performance Targets
 
-#### 1. Stabilize Test
-- ทดสอบความสามารถในการรักษาท่าทางบิน
-- ตรวจสอบ response time ของ LQR controller
-- วัดค่า overshoot และ settling time
+1. **การควบคุมท่าทาง (Attitude Control)**
+   - สามารถควบคุมโดรนให้ควบคุมองศาของตัวเองได้
+   - **Target Error:** ≤ ±10 degrees (Roll, Pitch, Yaw)
 
-#### 2. Position Control
-- ทดสอบการควบคุมตำแหน่งแบบ closed-loop
-- ตรวจสอบความแม่นยำในการเคลื่อนที่ไปยังจุดเป้าหมาย
-- วัด position error และ trajectory tracking
+2. **การควบคุมความสูง (Altitude Control)**  
+   - ตัวโดรนสามารถรักษาตำแหน่งความสูงที่กำหนดให้ได้
+   - **Target Error:** ≤ ±5 cm
 
-#### 3. Velocity Control
-- ทดสอบการควบคุมความเร็วในแต่ละแกน
-- ตรวจสอบ response ต่อ velocity commands
-- วัด acceleration และ deceleration characteristics
+3. **การทรงตัว (Hovering Capability)**
+   - โดรนสามารถลอยตัวได้ด้วยการควบคุมแบบ Thrust Vectoring
+   - เสถียรภาพในการลอยตัวโดยไม่มีการเซาะด้วยตนเอง
 
-### Hardware Testing
+4. **ประสิทธิภาพการสื่อสาร (Communication Performance)**
+   - การสื่อสาร ROS2 ↔ MicroROS มีความเสถียรและหน่วงต่ำ
+   - Latency < 50ms สำหรับ critical commands
 
-#### Prototype Vectoring Drone
-- สร้าง prototype เพื่อทดสอบกลไก thrust vectoring
-- ทดสอบความแข็งแรงของโครงสร้าง
-- วัดประสิทธิภาพของ thrust vanes
+5. **ความทนทานต่อสิ่งรบกวน (Disturbance Rejection)**
+   - PID สามารถรักษาสมดุลของโดรนได้ภายใต้ disturbance ขนาดเล็ก
+   - การตอบสนองต่อลมเบา ๆ หรือการเปลี่ยนแปลงโหลด
 
-#### Station Test Drone Gimbal
-- ทดสอบบนขาตั้ง (test stand) ก่อนบินจริง
-- วัดแรงขับและการตอบสนองของ servos
-- ทดสอบระบบควบคุมในสภาวะปลอดภัย
+6. **การแสดงผลแบบเรียลไทม์ (Real-time Visualization)**
+   - แสดงทิศทางแรงขับและท่าทางของโดรนใน Rviz ได้อย่างถูกต้อง
+   - การมอนิเตอร์สถานะแบบเรียลไทม์
 
-#### Drone Flight Test
-- ทดสอบบินจริง
-- ตรวจสอบความเสถียรและควบคุมได้
-- บันทึก flight data สำหรับวิเคราะห์
+### Success Criteria
 
-### RVIZ2 Visualization
+✅ **Phase 1: System Integration**
+- MicroROS communication established
+- Basic sensor data acquisition
+- Servo control functional
 
-แสดงผล real-time:
-- ตำแหน่งและทิศทางของ drone
-- TF transformations
-- Joint states (fin angles)
-- Trajectory path
+✅ **Phase 2: Control Implementation**  
+- PID controllers tuned and stable
+- Thrust vectoring mechanism working
+- Real-time performance achieved
+
+✅ **Phase 3: Flight Testing**
+- Successful hover for 30+ seconds  
+- Attitude control within error bounds
+- Safe landing and recovery
+
+---
+
+## 📅 Project Timeline
+
+### Development Schedule (6 Weeks)
+
+| Week | Tasks | Deliverables | Status |
+|------|-------|-------------|--------|
+| **Week 1** | ออกแบบโครงสร้างและระบบของโดรน<br>• Frame design<br>• Motor & ESC selection<br>• Flight controller planning | • CAD models<br>• Component list<br>• System architecture | ✅ Complete |
+| **Week 2** | ติดตั้งและตั้งค่า MicroROS บน ESP32<br>• ESP32 firmware development<br>• ROS2 setup on PC | • Working MicroROS node<br>• Basic communication test | ✅ Complete |
+| **Week 3** | พัฒนา Communication Code<br>• WiFi communication<br>• Topic structure<br>• Message protocols | • Stable MicroROS ↔ ROS2 link<br>• Real-time data exchange | 🔄 In Progress |
+| **Week 4** | พัฒนาระบบควบคุมการบินเบื้องต้น<br>• PID implementation<br>• Node/Topic/Service structure | • Flight control nodes<br>• Basic control algorithms | ⏳ Pending |
+| **Week 5** | ทดสอบระบบและปรับจูนพารามิเตอร์<br>• Sensor integration testing<br>• PID tuning<br>• Real flight tests | • Tuned parameters<br>• Flight test results<br>• Performance validation | ⏳ Pending |
+| **Week 6** | Final Integration & Documentation<br>• System optimization<br>• Documentation<br>• Project presentation | • Final demo<br>• Technical report<br>• Project presentation | ⏳ Pending |
+
+### Current Milestone Status
+
+🎯 **Current Focus: Week 3**
+- Establishing robust WiFi communication
+- Implementing MicroROS topic structure  
+- Testing real-time data exchange reliability
+
+📋 **Next Steps:**
+1. Complete communication stability testing
+2. Begin PID controller implementation  
+3. Integrate IMU sensor processing
+4. Develop servo control algorithms
 
 ---
 
@@ -633,55 +753,76 @@ ros2 topic pub /drone/setpoint geometry_msgs/msg/Point "{x: 0.0, y: 0.0, z: 1.0}
 
 ## 📚 References
 
-1. **State Space Model & LQR Controller**
-   - Master Thesis: Emil Jacobsen
+1. **Master Thesis - Emil Jacobsen**
+   - "Vectored Thrust Aided Attitude Control for a Single Rotor UAV"
    - https://vbn.aau.dk/ws/files/421577367/Master_Thesis_Emil_Jacobsen_v5.pdf
 
-2. **ROS2 Documentation**
+2. **Thrust Vectoring Control for Heavy UAVs**
+   - Isaac, M. S. A., Ragab, A. R., Luna, M. A., Ale Eshagh Khoeini, M. M., & Campoy, P. (2023)
+   - Employing a Redundant Communication
+
+3. **Valle et al. (2024)**
+   - การพัฒนาระบบควบคุมแรงขับแบบเบี่ยงทิศ (thrust vectoring) สำหรับ Heavy UAVs
+   - การบูรณาการระหว่างเซนเซอร์ IMU เข้ากับระบบควบคุมแบบป้อนกลับ
+
+4. **ROS2 Documentation**
    - https://docs.ros.org/en/humble/
 
-3. **Kalman Filter Implementation**
-   - Welch, G., & Bishop, G. "An Introduction to the Kalman Filter"
-
-4. **Thrust Vectoring Control**
-   - Various academic papers on vectored thrust UAVs
+5. **MicroROS Documentation**
+   - https://micro.ros.org/
 
 ---
 
 ## 👥 Team
 
-**Project Members:**
-- [Your Name] - Control Systems
-- [Team Member 2] - Hardware Design
-- [Team Member 3] - Software Development
-- [Team Member 4] - Testing & Integration
+**FIBO FRA501 – RoboticsDev Final Project 2025**
+**Institute of Field Robotics, King Mongkut's University of Technology Thonburi**
 
-**Advisor:**
-- [Advisor Name]
+**Project Members:**
+- **คุณานนต์ เศวตคชกุล** (66340500006) - System Architecture & Control
+- **นาราชล นรากุลพัชร์** (66340500027) - Hardware Design & Integration  
+- **ภูษิญ ประเสริฐสม** (66340500045) - Software Development & ROS2
+- **วิชาญ วิชญานุภาพ** (66340500051) - MicroROS & ESP32 Firmware
+- **ปวริศ ตั้งตระกูล** (66340500074) - Testing & Validation
+
+**Institution:**
+- Institute of Field Robotics
+- King Mongkut's University of Technology Thonburi  
+- 126 Pracha Uthit Rd, Bang Mot, Thung Khru, Bangkok, Thailand 10140
 
 ---
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is developed as part of FIBO FRA501 RoboticsDev coursework.
+Copyright © 2025 by FIBO, KMUTT
 
 ---
 
 ## 🙏 Acknowledgments
 
-- ROS2 Community
-- Gazebo Development Team
-- Academic advisors and mentors
-- All contributors to this project
+- **ROS2 Community** for the excellent robotics framework
+- **MicroROS Team** for embedded ROS2 support
+- **Emil Jacobsen** for the foundational thesis on thrust vectoring control
+- **FIBO Faculty** and **KMUTT** for project support and facilities
+- **Valle et al.** for inspiration from thrust vectoring research
 
 ---
 
 ## 📧 Contact
 
-For questions or collaboration:
-- Email: your.email@university.edu
-- GitHub: https://github.com/yourusername/thrust_vectoring_drone
+**For questions or collaboration:**
+- **Institution:** Institute of Field Robotics, KMUTT
+- **Course:** FIBO FRA501 – RoboticsDev Final Project 2025
+- **Location:** Bangkok, Thailand
+
+**Project Repository:**
+- GitHub: [Repository Link] (To be added)
 
 ---
 
-**Last Updated:** 02 December, 2025
+**Project Status:** 🔄 **Week 3 - Development in Progress**  
+**Last Updated:** 06 December, 2025
+README (1).md
+README (1).md (41 KB)
+41 KB
