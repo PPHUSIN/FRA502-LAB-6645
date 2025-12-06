@@ -194,12 +194,6 @@ ros2 launch drone_gazebo simulation_launch.py
 
 **Position Mode (Default)**:
 ```bash
-# Set position goal
-ros2 topic pub /drone/goal geometry_msgs/PoseStamped "
-pose:
-  position: {x: 2.0, y: 1.0, z: 1.5}
-  orientation: {w: 1.0}"
-
 # Direct setpoint
 ros2 topic pub /drone/setpoint geometry_msgs/Twist "
 linear: {x: 1.0, y: 0.5, z: 1.2}
