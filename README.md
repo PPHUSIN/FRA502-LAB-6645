@@ -1,1152 +1,687 @@
-# ระบบควบคุม Thrust Vectoring Drone
+# THRUST VECTORING DRONE
+**ROS2 PROJECT**
 
-**โปรเจกต์: Thrust Vectoring Quadcopter Control System**
-
-รหัสนักศึกษา:
-- 66340500006
-- 66340500027
-- 66340500045
-- 66340500051
-- 66340500074 
-
-โปรเจกต์นี้พัฒนาระบบควบคุม Drone แบบ Thrust Vectoring ที่สามารถปรับทิศทางแรงขับได้ด้วย Servo Motors โดยใช้ระบบควบคุมแบบ PID และ Flight Controller สำหรับการบินที่เสถียร พร้อมระบบควบคุมผ่าน Ground Control Station และการสื่อสารแบบ Wireless
+02 DEC, 2025
 
 ---
 
-## สารบัญ
+## 📋 สารบัญ
 
-1. [วัตถุประสงค์](#1-วัตถุประสงค์)
-2. [ขอบเขตของโปรเจกต์](#2-ขอบเขตของโปรเจกต์)
-3. [ทฤษฎีที่เกี่ยวข้อง](#3-ทฤษฎีที่เกี่ยวข้อง)
-4. [คำอธิบายระบบ](#4-คำอธิบายระบบ)
-5. [สถาปัตยกรรมระบบ](#5-สถาปัตยกรรมระบบ)
-6. [แผนภาพระบบ](#6-แผนภาพระบบ)
-7. [วิธีการดำเนินงาน](#7-วิธีการดำเนินงาน)
-8. [การใช้งาน](#8-การใช้งาน)
-
----
-
-## 1. วัตถุประสงค์
-
-- พัฒนาระบบ Thrust Vectoring สำหรับ Quadcopter ด้วย Servo Motors
-- ออกแบบระบบควบคุมการบินแบบ Multi-axis PID Control
-- สร้าง Ground Control Station (GCS) สำหรับ monitoring และควบคุม drone
-- ประยุกต์ใช้ IMU และ sensor fusion สำหรับการวัดทิศทางและความเร่ง
-- พัฒนาระบบสื่อสารแบบ wireless real-time
-- ทดสอบและปรับแต่งค่า PID parameters สำหรับการบินที่เสถียร
+1. [Overview](#-overview)
+2. [System Architecture](#-system-architecture)
+3. [General Information](#-general-information)
+4. [Control System](#-control-system)
+5. [Hardware Design](#-hardware-design)
+6. [ROS2 Implementation](#-ros2-implementation)
+7. [Testing & Results](#-testing--results)
+8. [Installation & Setup](#-installation--setup)
+9. [Usage](#-usage)
 
 ---
 
-## 2. ขอบเขตของโปรเจกต์
+## 🎯 Overview
 
-### ขอบเขตการศึกษา
+โปรเจกต์นี้พัฒนาระบบ **Thrust Vectoring Drone** โดยใช้ ROS2 เป็น framework หลักในการควบคุมและสื่อสาร ระหว่าง Ground Station (PC) และ Drone ผ่านระบบ WiFi
 
-- ศึกษา Thrust Vectoring mechanism แบบ 4 motors + 4 servos
-- ใช้ Flight Controller (ESP32/STM32) พร้อม IMU
-- พัฒนา Ground Control Station ด้วย Python
-- สื่อสารผ่าน WiFi/LoRa protocol
-- ควบคุมด้วย PID Controller สำหรับ Roll, Pitch, Yaw
+### System Components
 
-### ข้อจำกัดของระบบ
-
-![ภาพของ Drone](drone_image.png)
-
-**พารามิเตอร์ Drone:**
-
-| พารามิเตอร์ | สัญลักษณ์ | ค่า | หน่วย |
-|------------|----------|-----|-------|
-| ระยะห่าง Motor | L | 200 | mm |
-| น้ำหนักรวม | m | 800 | g |
-| มุมเอียงสูงสุด | θ_max | ±15 | ° |
-| แรงขับต่อ Motor | T_max | 400 | g |
-
-**ขอบเขตการทำงาน:**
-
-- Thrust Vector Angle: -15° ถึง +15° (แต่ละแกน)
-- Roll/Pitch: -45° ถึง +45°
-- Yaw Rate: -180°/s ถึง +180°/s
-- Battery Voltage: 11.1V - 12.6V (3S LiPo)
-
-**ข้อจำกัดของแรงควบคุม:**
-
-- แรงขับสูงสุดถูกจำกัดโดย Brushless Motor specifications
-- ความเร็วการตอบสนองของ servo: 60°/0.1s
-- Update rate: 250Hz สำหรับ PID controller
-
-**ข้อจำกัดอื่น ๆ:**
-
-- ระบบไม่รองรับการบินในสภาพอากาศแรง (ลมเกิน 5 m/s)
-- Flight time จำกัดที่ประมาณ 8-12 นาที
-- ใช้งานกับ RC Controller หรือ GCS เท่านั้น
-- ระยะควบคุมจำกัดที่ 500m (WiFi) หรือ 2km (LoRa)
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      PC (AGENT)                             │
+│  ┌──────────┐              ┌──────────┐                    │
+│  │  RVIZ2   │              │  TELEOP  │                    │
+│  └──────────┘              └──────────┘                    │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                    WiFi │ Communication
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│                   DRONE (CLIENT)                            │
+│                                                             │
+│  ┌──────────────────┐        ┌─────────────────┐          │
+│  │ FLIGHT CONTROLLER│───────▶│    ACTUATORS    │          │
+│  │                  │        │  - ESC          │          │
+│  │  - Control Logic │        │  - Ducted Fan   │          │
+│  │  - LQR + Kalman  │        │  - 4x Servos    │          │
+│  └────────┬─────────┘        └─────────────────┘          │
+│           │                                                 │
+│           ▼                                                 │
+│  ┌──────────────────┐        ┌─────────────────┐          │
+│  │     SENSORS      │        │ POWER SYSTEM    │          │
+│  │  - IMU           │        │  - Battery      │          │
+│  │  - GPS           │        │  - Regulator    │          │
+│  │  - TOF Sensor    │        └─────────────────┘          │
+│  │  - OLED Display  │                                      │
+│  └──────────────────┘                                      │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 3. ทฤษฎีที่เกี่ยวข้อง
+## 🏗️ System Architecture
 
-### 3.1 Thrust Vectoring Principles
-
-Thrust Vectoring คือการควบคุมทิศทางของแรงขับเพื่อควบคุมทิศทางการเคลื่อนที่ของยานพาหนะ
-
-**ประเภทของ Thrust Vectoring:**
-
-1. **2D Thrust Vectoring**: เอียงได้ 1 แกน (Pitch หรือ Yaw)
-2. **3D Thrust Vectoring**: เอียงได้ 2 แกน (Pitch และ Yaw พร้อมกัน)
-
-**สมการแรงขับ:**
+### ROS2 Node Diagram
 
 ```
-T_x = T·sin(α)·cos(β)
-T_y = T·sin(α)·sin(β)
-T_z = T·cos(α)
+┌─────────────────────────────────────────────────────────────────┐
+│                          PC (AGENT)                             │
+│                                                                 │
+│  ┌─────────────────┐              ┌──────────────────┐        │
+│  │     RVIZ2       │              │     TELEOP       │        │
+│  │                 │              │                  │        │
+│  │ Subscribers:    │              │ Publishers:      │        │
+│  │ • /robot_desc   │              │ • /cmd_vel       │        │
+│  │ • /tf           │              │                  │        │
+│  └─────────────────┘              └──────────────────┘        │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                         WiFi │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         DRONE (CLIENT)                          │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │         DRONE ROBOT STATE PUBLISHER                      │  │
+│  │                                                          │  │
+│  │  Publishers:                                            │  │
+│  │  • /tf                                                  │  │
+│  │  • /robot_description                                   │  │
+│  │                                                          │  │
+│  │  Subscribers:                                           │  │
+│  │  • /joint_states                                        │  │
+│  └────────────────────┬─────────────────────────────────────┘  │
+│                       │                                         │
+│  ┌────────────────────▼─────────────────────────────────────┐  │
+│  │              DRONE POSE NODE                            │  │
+│  │                                                          │  │
+│  │  Publishers:                                            │  │
+│  │  • /drone/pose                                          │  │
+│  │  • /drone/angle                                         │  │
+│  │  • /fin/angle                                           │  │
+│  │                                                          │  │
+│  │  Subscribers:                                           │  │
+│  │  • /cmd_vel                                             │  │
+│  └────────────────────┬─────────────────────────────────────┘  │
+│                       │                                         │
+│  ┌────────────────────▼─────────────────────────────────────┐  │
+│  │              FIN ANGLE NODE                             │  │
+│  │                                                          │  │
+│  │  Publishers:                                            │  │
+│  │  • /joint_states                                        │  │
+│  │                                                          │  │
+│  │  Subscribers:                                           │  │
+│  │  • /fin/angle                                           │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-โดย:
-- T = แรงขับรวม
-- α = มุมเอียง (tilt angle)
-- β = มุมหมุน (azimuth angle)
-
-### 3.2 Flight Dynamics
-
-**6 Degrees of Freedom (6-DOF):**
-
-ตำแหน่ง (Position):
-- x, y, z ในระบบพิกัด
-
-ทิศทาง (Orientation):
-- Roll (φ): การหมุนรอบแกน X
-- Pitch (θ): การหมุนรอบแกน Y
-- Yaw (ψ): การหมุนรอบแกน Z
-
-**Euler Angles:**
+### System Diagram - Data Flow
 
 ```
-R = R_z(ψ) × R_y(θ) × R_x(φ)
+┌──────────┐                                      ┌──────────┐
+│  RVIZ2   │◄─────────────────────────────────────│  DRONE   │
+└──────────┘         Show TF of drone            └──────────┘
+                                                       │
+┌──────────┐                                          │
+│  TELEOP  │──────────────────────────────────────►  │
+└──────────┘    Publish /cmd_vel for velocity        │
+                                                      │
+                                                      ▼
+                                        ┌─────────────────────────┐
+                                        │  Speed Control → ESC    │
+                                        │         ▼               │
+                                        │    Ducted Fan           │
+                                        │                         │
+                                        │  Sensors:               │
+                                        │  • IMU                  │
+                                        │  • GPS                  │
+                                        │  • OLED                 │
+                                        │  • TOF Sensor           │
+                                        └─────────────────────────┘
 ```
 
-**สมการการเคลื่อนที่:**
+---
+
+## 📊 General Information
+
+### Specifications
+
+| Parameter | Value | Unit |
+|-----------|-------|------|
+| **Takeoff Weight** | 707 | g |
+| **Max Thrust** | 1250 | g |
+| **T/W Ratio** | 1.79 | - |
+| **Flight Time** | 5 | minutes |
+| **Dimensions** | 100 x 100 x 160 | mm |
+
+### Performance Characteristics
+
+- **Thrust-to-Weight Ratio**: 1.79 (excellent maneuverability)
+- **Endurance**: 5 minutes flight time
+- **Compact Design**: 100mm x 100mm footprint
+- **Control**: 4-fin thrust vectoring system
+
+---
+
+## 🎮 Control System
+
+### LQR Controller
+
+ระบบใช้ **Linear Quadratic Regulator (LQR)** สำหรับการควบคุมการบินที่เหมาะสมที่สุด
 
 ```
-m·a = ΣF = T - mg - D
-I·α = Στ
+┌─────────┐    ┌──────────┐    ┌────────────────┐    ┌─────────┐
+│  Target │───▶│   LQR    │───▶│ SERVO +        │───▶│ Output  │
+│ Altitude│    │          │    │ THRUSTER       │    │ [4 fin  │
+└─────────┘    │          │    │ CONTROLLER     │    │+ thrust]│
+               └────▲─────┘    └────────────────┘    └─────────┘
+                    │
+               ┌────┴─────┐
+               │   IMU    │
+               │   TOF    │
+               │ Velocity │
+               └──────────┘
+               
+Input: roll, pitch, yaw, altitude
+Output: 4 fin angles + thruster speed
 ```
 
-โดย:
-- m = มวล
-- I = moment of inertia
-- T = thrust vector
-- D = drag force
-- τ = torque
+**State Space Model:**
 
-### 3.3 PID Control Theory
-
-PID (Proportional-Integral-Derivative) Controller ใช้สำหรับควบคุมการบิน:
-
-**สมการ PID:**
+อ้างอิง: [Master Thesis - Emil Jacobsen](https://vbn.aau.dk/ws/files/421577367/Master_Thesis_Emil_Jacobsen_v5.pdf)
 
 ```
-u(t) = K_p·e(t) + K_i·∫e(t)dt + K_d·de(t)/dt
+ẋ = Ax + Bu
+y = Cx + Du
+
+Where:
+x = [x, y, z, φ, θ, ψ, ẋ, ẏ, ż, φ̇, θ̇, ψ̇]ᵀ
+u = [fin1, fin2, fin3, fin4, thrust]ᵀ
 ```
 
-โดย:
-- e(t) = error = setpoint - measured_value
-- K_p = proportional gain
-- K_i = integral gain
-- K_d = derivative gain
+### Kalman Filter
 
-**PID Implementation:**
+ใช้ **Kalman Filter** สำหรับการประมาณค่า state ที่แม่นยำ
 
+```
+┌────────────────────────────────────────┐
+│         KALMAN FILTER                  │
+│                                        │
+│  ┌──────────────┐  ┌────────────────┐ │
+│  │   PREDICT    │  │  MEASUREMENT   │ │
+│  │              │  │     UPDATE     │ │
+│  │ Extrapolate  │─▶│  Update state  │ │
+│  │  the state   │  │with measurement│ │
+│  └──────────────┘  └────────────────┘ │
+└────────────────────────────────────────┘
+
+Combined System:
+┌─────────┐    ┌─────────┐    ┌──────────┐    ┌─────────┐
+│  Target │───▶│ KALMAN  │───▶│   LQR    │───▶│ SERVO + │
+│Altitude │    │         │    │          │    │THRUSTER │
+└─────────┘    └────▲────┘    └──────────┘    └─────────┘
+                    │
+               ┌────┴─────┐
+               │   IMU    │
+               │   TOF    │
+               │ Velocity │
+               └──────────┘
+```
+
+**Kalman Filter Equations:**
+
+Prediction Step:
+```
+x̂ₖ⁻ = Aₖ₋₁x̂ₖ₋₁ + Bₖ₋₁uₖ₋₁
+Pₖ⁻ = Aₖ₋₁Pₖ₋₁Aₖ₋₁ᵀ + Qₖ₋₁
+```
+
+Update Step:
+```
+Kₖ = Pₖ⁻Hₖᵀ(HₖPₖ⁻Hₖᵀ + Rₖ)⁻¹
+x̂ₖ = x̂ₖ⁻ + Kₖ(zₖ - Hₖx̂ₖ⁻)
+Pₖ = (I - KₖHₖ)Pₖ⁻
+```
+
+---
+
+## 🔧 Hardware Design
+
+### Thrust Vane Mechanism
+
+```
+┌──────────────────────────────────────┐
+│      THRUST VANE FORCE               │
+│                                      │
+│           ┌────────┐                 │
+│           │ SERVO  │                 │
+│           │ MOTOR  │                 │
+│           └───┬────┘                 │
+│               │                      │
+│         ┌─────▼─────┐                │
+│         │   THRUST  │                │
+│         │    VANE   │                │
+│         └───────────┘                │
+│               │                      │
+│               ▼                      │
+│         Vectored Thrust              │
+└──────────────────────────────────────┘
+```
+
+### Airfoil Design
+
+โปรเจกต์มีการออกแบบ **Airfoil** สำหรับ thrust vanes เพื่อประสิทธิภาพสูงสุด
+
+- ใช้หลักการ aerodynamics
+- ออกแบบให้มีแรงต้านต่ำ
+- ประสิทธิภาพสูงในการเปลี่ยนทิศทางแรงขับ
+
+---
+
+## 🚀 ROS2 Implementation
+
+### ROS2 Nodes
+
+#### 1. Drone Robot State Publisher
 ```python
-class PIDController:
-    def __init__(self, kp, ki, kd):
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
-        self.integral = 0
-        self.previous_error = 0
-    
-    def update(self, error, dt):
-        self.integral += error * dt
-        derivative = (error - self.previous_error) / dt
-        
-        output = (self.kp * error + 
-                  self.ki * self.integral + 
-                  self.kd * derivative)
-        
-        self.previous_error = error
-        return output
+# Publishers
+/tf                    # TF transformations
+/robot_description     # URDF model
+
+# Subscribers
+/joint_states         # Joint positions from servos
 ```
 
-### 3.4 IMU และ Sensor Fusion
-
-**IMU (Inertial Measurement Unit) ประกอบด้วย:**
-
-1. **Accelerometer**: วัดความเร่ง (3 แกน)
-2. **Gyroscope**: วัดความเร็วเชิงมุม (3 แกน)
-3. **Magnetometer**: วัดทิศทาง (compass)
-
-**Complementary Filter:**
-
-ใช้รวมข้อมูลจาก accelerometer และ gyroscope:
-
-```
-angle = α × (angle + gyro_rate × dt) + (1-α) × accel_angle
-```
-
-โดย α = 0.98 โดยทั่วไป
-
-**Kalman Filter:**
-
-ใช้สำหรับ sensor fusion ที่แม่นยำกว่า:
-
+#### 2. Drone Pose Node
 ```python
-# Prediction Step
-x_pred = A @ x + B @ u
-P_pred = A @ P @ A.T + Q
+# Publishers
+/drone/pose          # Current position (x, y, z)
+/drone/angle         # Current attitude (roll, pitch, yaw)
+/fin/angle           # Fin angles [fin1, fin2, fin3, fin4]
 
-# Update Step
-K = P_pred @ H.T @ inv(H @ P_pred @ H.T + R)
-x = x_pred + K @ (z - H @ x_pred)
-P = (I - K @ H) @ P_pred
+# Subscribers
+/cmd_vel             # Velocity commands from teleop
 ```
 
-### 3.5 Thrust Vectoring Control
-
-**การคำนวณมุมเอียงของ Servo:**
-
-สำหรับการควบคุม Roll:
-
-```
-servo_angle_left = baseline_angle + roll_correction
-servo_angle_right = baseline_angle - roll_correction
-```
-
-สำหรับการควบคุม Pitch:
-
-```
-servo_angle_front = baseline_angle + pitch_correction
-servo_angle_back = baseline_angle - pitch_correction
-```
-
-**Mixing Algorithm:**
-
+#### 3. Fin Angle Node
 ```python
-def calculate_servo_angles(roll, pitch, yaw):
-    """
-    คำนวณมุม servo จากคำสั่ง roll, pitch, yaw
-    """
-    # Normalize inputs
-    roll = constrain(roll, -MAX_ANGLE, MAX_ANGLE)
-    pitch = constrain(pitch, -MAX_ANGLE, MAX_ANGLE)
-    
-    # Calculate servo angles
-    servo_fl = BASE_ANGLE + roll + pitch  # Front-left
-    servo_fr = BASE_ANGLE - roll + pitch  # Front-right
-    servo_bl = BASE_ANGLE + roll - pitch  # Back-left
-    servo_br = BASE_ANGLE - roll - pitch  # Back-right
-    
-    return [servo_fl, servo_fr, servo_bl, servo_br]
+# Publishers
+/joint_states        # Joint states for URDF visualization
+
+# Subscribers
+/fin/angle           # Desired fin angles from controller
 ```
 
-### 3.6 Motor Control และ ESC
-
-**PWM Signal สำหรับ ESC:**
-
-- Minimum: 1000μs (Motor OFF)
-- Maximum: 2000μs (Full Throttle)
-- Typical Range: 1100-1900μs
-
-**Throttle Mixing:**
-
+#### 4. RVIZ2 Node
 ```python
-def calculate_motor_speeds(throttle, roll_pid, pitch_pid, yaw_pid):
-    """
-    คำนวณความเร็วของแต่ละ motor
-    """
-    m1 = throttle + pitch_pid + roll_pid - yaw_pid  # Front-right
-    m2 = throttle + pitch_pid - roll_pid + yaw_pid  # Front-left
-    m3 = throttle - pitch_pid - roll_pid - yaw_pid  # Back-left
-    m4 = throttle - pitch_pid + roll_pid + yaw_pid  # Back-right
-    
-    return constrain_all([m1, m2, m3, m4], MIN_PWM, MAX_PWM)
+# Subscribers
+/robot_description   # Load drone model
+/tf                  # Display drone position and orientation
 ```
 
----
-
-## 4. คำอธิบายระบบ
-
-### 4.1 ภาพรวมของระบบ
-
-ระบบควบคุม Thrust Vectoring Drone ประกอบด้วยส่วนหลัก:
-
-1. **Flight Controller (Onboard)**
-   - ESP32/STM32 microcontroller
-   - IMU (MPU6050/MPU9250)
-   - PID control loops
-   - Servo และ ESC control
-   - Wireless communication
-
-2. **Ground Control Station (GCS)**
-   - Python-based GUI
-   - Real-time telemetry display
-   - Parameter tuning interface
-   - Flight data logging
-
-3. **Mechanical System**
-   - 4x Brushless Motors
-   - 4x ESCs
-   - 4x Servo Motors (thrust vectoring)
-   - Frame structure
-   - Battery และ power distribution
-
-4. **RC Controller (Optional)**
-   - 2.4GHz transmitter/receiver
-   - Manual flight control
-   - Emergency override
-
-### 4.2 พารามิเตอร์ของระบบ
-
-**พารามิเตอร์ทางกายภาพ:**
-
-| พารามิเตอร์ | สัญลักษณ์ | ค่า | หน่วย |
-|------------|----------|-----|-------|
-| Wheelbase | L | 200 | mm |
-| Total Mass | m | 800 | g |
-| Moment of Inertia (X) | I_x | 0.015 | kg·m² |
-| Moment of Inertia (Y) | I_y | 0.015 | kg·m² |
-| Moment of Inertia (Z) | I_z | 0.025 | kg·m² |
-| Battery | - | 3S 2200mAh | LiPo |
-
-**พารามิเตอร์ PID (เริ่มต้น):**
-
-| Controller | K_p | K_i | K_d |
-|-----------|-----|-----|-----|
-| Roll | 1.5 | 0.05 | 0.8 |
-| Pitch | 1.5 | 0.05 | 0.8 |
-| Yaw | 2.0 | 0.1 | 0.5 |
-| Altitude | 2.5 | 0.5 | 1.5 |
-
-### 4.3 State Variables
-
-**ตัวแปรสถานะการบิน:**
-
-| State | สัญลักษณ์ | คำอธิบาย | หน่วย |
-|-------|----------|---------|-------|
-| Roll Angle | φ | มุมการหมุนรอบแกน X | rad |
-| Pitch Angle | θ | มุมการหมุนรอบแกน Y | rad |
-| Yaw Angle | ψ | มุมการหมุนรอบแกน Z | rad |
-| Roll Rate | p | ความเร็วเชิงมุมรอบแกน X | rad/s |
-| Pitch Rate | q | ความเร็วเชิงมุมรอบแกน Y | rad/s |
-| Yaw Rate | r | ความเร็วเชิงมุมรอบแกน Z | rad/s |
-| Altitude | z | ความสูงจากพื้น | m |
-| Battery Voltage | V_bat | แรงดันแบตเตอรี่ | V |
-
-### 4.4 Coordinate Systems
-
-**ระบบพิกัด:**
-
-- **Inertial Frame (NED)**: North-East-Down (ติดกับพื้นดิน)
-- **Body Frame**: ติดกับตัว drone
-  - X-axis: ชี้ไปข้างหน้า
-  - Y-axis: ชี้ไปทางขวา
-  - Z-axis: ชี้ลงด้านล่าง
-
-**การแปลงพิกัด:**
-
-```
-v_body = R(φ,θ,ψ) × v_inertial
+#### 5. Teleop Node
+```python
+# Publishers
+/cmd_vel             # Twist messages for drone velocity control
 ```
 
----
-
-## 5. สถาปัตยกรรมระบบ
-
-### 5.1 Software Architecture
+### System Architecture (Gazebo Simulation)
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│              Ground Control Station (PC)                │
-│  - PyQt5/Tkinter GUI                                    │
-│  - Real-time Telemetry Display                          │
-│  - PID Tuning Interface                                 │
-│  - Flight Data Logger                                   │
-└────────────────┬────────────────────────────────────────┘
-                 │
-                 │ WiFi/LoRa
-                 │ (MAVLink Protocol)
-                 ▼
-┌─────────────────────────────────────────────────────────┐
-│          Flight Controller (ESP32/STM32)                │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │         Main Control Loop (250Hz)               │   │
-│  │  - Sensor Reading                               │   │
-│  │  - Attitude Estimation (Kalman Filter)          │   │
-│  │  - PID Controllers (Roll/Pitch/Yaw/Alt)         │   │
-│  │  - Motor Mixing                                 │   │
-│  │  - Servo Control                                │   │
-│  └─────────────────────────────────────────────────┘   │
-└────────────────┬────────────────────────────────────────┘
-                 │
-         ┌───────┴────────┐
-         │                │
-         ▼                ▼
-┌─────────────┐  ┌─────────────┐
-│   4x ESC    │  │ 4x Servo    │
-│  (Motor     │  │  (Thrust    │
-│   Control)  │  │   Vector)   │
-└──────┬──────┘  └──────┬──────┘
-       │                │
-       ▼                ▼
-┌─────────────┐  ┌─────────────┐
-│ 4x BLDC     │  │ Vectoring   │
-│   Motors    │  │ Mechanism   │
-└─────────────┘  └─────────────┘
-```
-
-### 5.2 Control Loop Architecture
-
-```
-┌──────────────────────────────────────────────────────┐
-│              Control Loop (250Hz)                    │
-│                                                      │
-│  ┌────────┐    ┌────────┐    ┌────────┐           │
-│  │  IMU   │───▶│ Sensor │───▶│Attitude│           │
-│  │ Read   │    │ Fusion │    │Estimate│           │
-│  └────────┘    └────────┘    └────────┘           │
-│                                   │                 │
-│                                   ▼                 │
-│  ┌────────┐    ┌────────┐    ┌────────┐           │
-│  │ RC/GCS │───▶│  PID   │───▶│ Motor  │───▶ ESC   │
-│  │Command │    │Control │    │ Mixing │           │
-│  └────────┘    └────────┘    └────────┘           │
-│                                   │                 │
-│                                   ▼                 │
-│  ┌────────┐                  ┌────────┐           │
-│  │ Servo  │◀─────────────────│Vectoring│          │
-│  │Control │                  │ Calc   │           │
-│  └────────┘                  └────────┘           │
-└──────────────────────────────────────────────────────┘
-```
-
-### 5.3 Communication Architecture
-
-**MAVLink Protocol Stack:**
-
-```
-┌─────────────────────────────────────┐
-│      Application Layer              │
-│   - Telemetry Messages              │
-│   - Command Messages                │
-│   - Parameter Protocol              │
-└────────────────┬────────────────────┘
-                 │
-┌────────────────▼────────────────────┐
-│       MAVLink Protocol              │
-│   - Message Encoding/Decoding       │
-│   - CRC Checking                    │
-└────────────────┬────────────────────┘
-                 │
-┌────────────────▼────────────────────┐
-│     Transport Layer                 │
-│   - WiFi UDP (Port 14550)           │
-│   - LoRa Serial (57600 baud)        │
-└─────────────────────────────────────┘
-```
-
----
-
-## 6. แผนภาพระบบ
-
-### 6.1 Control Flow Diagram
-
-```
-┌────────────────────┐
-│   Sensor Input     │
-│ • IMU (Accel/Gyro) │
-│ • Barometer        │
-│ • RC/GCS Commands  │
-└─────────┬──────────┘
-          │
-          ▼
-┌────────────────────┐
-│  Sensor Fusion     │
-│  (Kalman Filter)   │
-└─────────┬──────────┘
-          │
-          ▼
-┌────────────────────┐
-│  PID Controllers   │
-│  • Roll PID        │
-│  • Pitch PID       │
-│  • Yaw PID         │
-│  • Altitude PID    │
-└─────────┬──────────┘
-          │
-          ▼
-┌────────────────────┐
-│  Motor Mixing      │
-│  Calculate speeds  │
-└─────────┬──────────┘
-          │
-          ├────────────────┐
-          │                │
-          ▼                ▼
-┌────────────────┐  ┌────────────────┐
-│  ESC Output    │  │ Servo Control  │
-│  PWM 1000-2000 │  │ Thrust Vector  │
-└────────┬───────┘  └────────┬───────┘
-         │                   │
-         ▼                   ▼
-┌────────────────┐  ┌────────────────┐
-│ BLDC Motors    │  │ Servo Motors   │
-└────────────────┘  └────────────────┘
-```
-
-### 6.2 State Machine Diagram
-
-```
-              ┌─────────────┐
-              │   STANDBY   │◀────┐
-              └──────┬──────┘     │
-                     │ ARM         │ DISARM
-                     ▼             │
-              ┌─────────────┐     │
-         ┌───▶│   ARMED     │─────┘
-         │    └──────┬──────┘
-         │           │ TAKEOFF
- LANDING │           ▼
-         │    ┌─────────────┐
-         └────│   FLYING    │
-              └──────┬──────┘
+┌──────────────────────────────────────────────────────────┐
+│              LQR CONTROLLER                              │
+│                                                          │
+│  Publishers:                                            │
+│  • /drone/fin/position                                  │
+│  • /drone/cmd_thrust                                    │
+│                                                          │
+│  Subscribers:                                           │
+│  • /drone/control_mode                                  │
+│  • /drone/setpoint                                      │
+│  • /drone/velocity_setpoint                             │
+│  • /odom                                                │
+└────────────────────┬─────────────────────────────────────┘
                      │
-         ┌───────────┼───────────┐
-         │           │           │
-         ▼           ▼           ▼
-    ┌────────┐ ┌────────┐ ┌────────┐
-    │ MANUAL │ │STABILIZE│ │  AUTO  │
-    └────────┘ └────────┘ └────────┘
+                     ▼
+┌──────────────────────────────────────────────────────────┐
+│              TVC CONTROLLER                              │
+│                                                          │
+│  Publishers:                                            │
+│  • /drone/thrust                                        │
+│                                                          │
+│  Subscribers:                                           │
+│  • /drone/fin/position                                  │
+│  • /drone/cmd_thrust                                    │
+└────────────────────┬─────────────────────────────────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────────────────┐
+│                   GAZEBO                                 │
+│                                                          │
+│  Publishers:                                            │
+│  • /odom                                                │
+│                                                          │
+│  Subscribers:                                           │
+│  • /drone/thrust                                        │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 7. วิธีการดำเนินงาน
+## 🧪 Testing & Results
 
-### 7.1 Sensor Fusion Implementation
+### Test Configurations
 
-**Step 1: อ่านข้อมูลจาก IMU**
+#### 1. Stabilize Test
+- ทดสอบความสามารถในการรักษาท่าทางบิน
+- ตรวจสอบ response time ของ LQR controller
+- วัดค่า overshoot และ settling time
 
-```python
-import smbus
-import time
+#### 2. Position Control
+- ทดสอบการควบคุมตำแหน่งแบบ closed-loop
+- ตรวจสอบความแม่นยำในการเคลื่อนที่ไปยังจุดเป้าหมาย
+- วัด position error และ trajectory tracking
 
-class MPU6050:
-    def __init__(self, bus=1, address=0x68):
-        self.bus = smbus.SMBus(bus)
-        self.address = address
-        self.init_sensor()
-    
-    def read_accel(self):
-        """อ่านค่า accelerometer"""
-        raw_x = self.read_word_2c(0x3B)
-        raw_y = self.read_word_2c(0x3D)
-        raw_z = self.read_word_2c(0x3F)
-        
-        # แปลงเป็น g (±2g range)
-        accel_x = raw_x / 16384.0
-        accel_y = raw_y / 16384.0
-        accel_z = raw_z / 16384.0
-        
-        return accel_x, accel_y, accel_z
-    
-    def read_gyro(self):
-        """อ่านค่า gyroscope"""
-        raw_x = self.read_word_2c(0x43)
-        raw_y = self.read_word_2c(0x45)
-        raw_z = self.read_word_2c(0x47)
-        
-        # แปลงเป็น deg/s (±250°/s range)
-        gyro_x = raw_x / 131.0
-        gyro_y = raw_y / 131.0
-        gyro_z = raw_z / 131.0
-        
-        return gyro_x, gyro_y, gyro_z
-```
+#### 3. Velocity Control
+- ทดสอบการควบคุมความเร็วในแต่ละแกน
+- ตรวจสอบ response ต่อ velocity commands
+- วัด acceleration และ deceleration characteristics
 
-**Step 2: Complementary Filter**
+### Hardware Testing
 
-```python
-class ComplementaryFilter:
-    def __init__(self, alpha=0.98):
-        self.alpha = alpha
-        self.angle_x = 0.0
-        self.angle_y = 0.0
-        self.last_time = time.time()
-    
-    def update(self, accel, gyro):
-        """รวมข้อมูลจาก accel และ gyro"""
-        current_time = time.time()
-        dt = current_time - self.last_time
-        self.last_time = current_time
-        
-        # คำนวณมุมจาก accelerometer
-        accel_angle_x = math.atan2(accel[1], accel[2])
-        accel_angle_y = math.atan2(-accel[0], math.sqrt(accel[1]**2 + accel[2]**2))
-        
-        # รวมกับ gyroscope
-        self.angle_x = self.alpha * (self.angle_x + gyro[0] * dt) + (1-self.alpha) * accel_angle_x
-        self.angle_y = self.alpha * (self.angle_y + gyro[1] * dt) + (1-self.alpha) * accel_angle_y
-        
-        return math.degrees(self.angle_x), math.degrees(self.angle_y)
-```
+#### Prototype Vectoring Drone
+- สร้าง prototype เพื่อทดสอบกลไก thrust vectoring
+- ทดสอบความแข็งแรงของโครงสร้าง
+- วัดประสิทธิภาพของ thrust vanes
 
-### 7.2 PID Controller Implementation
+#### Station Test Drone Gimbal
+- ทดสอบบนขาตั้ง (test stand) ก่อนบินจริง
+- วัดแรงขับและการตอบสนองของ servos
+- ทดสอบระบบควบคุมในสภาวะปลอดภัย
 
-```python
-class PIDController:
-    def __init__(self, kp, ki, kd, output_limits=(-100, 100)):
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
-        self.output_limits = output_limits
-        
-        self.integral = 0
-        self.previous_error = 0
-        self.last_time = time.time()
-    
-    def compute(self, setpoint, measured_value):
-        """คำนวณ PID output"""
-        current_time = time.time()
-        dt = current_time - self.last_time
-        self.last_time = current_time
-        
-        # คำนวณ error
-        error = setpoint - measured_value
-        
-        # Proportional term
-        p_term = self.kp * error
-        
-        # Integral term (anti-windup)
-        self.integral += error * dt
-        self.integral = self.constrain(self.integral, -50, 50)
-        i_term = self.ki * self.integral
-        
-        # Derivative term
-        derivative = (error - self.previous_error) / dt if dt > 0 else 0
-        d_term = self.kd * derivative
-        
-        # Output
-        output = p_term + i_term + d_term
-        output = self.constrain(output, *self.output_limits)
-        
-        self.previous_error = error
-        return output
-    
-    def reset(self):
-        """รีเซ็ต PID"""
-        self.integral = 0
-        self.previous_error = 0
-    
-    @staticmethod
-    def constrain(value, min_val, max_val):
-        return max(min_val, min(max_val, value))
-```
+#### Drone Flight Test
+- ทดสอบบินจริง
+- ตรวจสอบความเสถียรและควบคุมได้
+- บันทึก flight data สำหรับวิเคราะห์
 
-### 7.3 Motor Mixing และ Servo Control
+### RVIZ2 Visualization
 
-**Step 1: Motor Mixing**
-
-```python
-def calculate_motor_outputs(throttle, roll_pid, pitch_pid, yaw_pid):
-    """
-    คำนวณ PWM สำหรับแต่ละ motor
-    
-    Motor Layout:
-         Front
-      M2     M1
-        \ X /
-        / X \
-      M3     M4
-         Back
-    """
-    # Mixing algorithm
-    m1 = throttle + pitch_pid + roll_pid - yaw_pid  # Front-right
-    m2 = throttle + pitch_pid - roll_pid + yaw_pid  # Front-left
-    m3 = throttle - pitch_pid - roll_pid - yaw_pid  # Back-left
-    m4 = throttle - pitch_pid + roll_pid + yaw_pid  # Back-right
-    
-    # Constrain to ESC range (1000-2000μs)
-    motors = [
-        constrain(m1, 1000, 2000),
-        constrain(m2, 1000, 2000),
-        constrain(m3, 1000, 2000),
-        constrain(m4, 1000, 2000)
-    ]
-    
-    return motors
-
-def constrain(value, min_val, max_val):
-    return max(min_val, min(max_val, value))
-```
-
-**Step 2: Thrust Vectoring Control**
-
-```python
-def calculate_servo_angles(roll_angle, pitch_angle, max_tilt=15):
-    """
-    คำนวณมุม servo สำหรับ thrust vectoring
-    
-    Servo Layout:
-         Front
-      S2     S1
-        \ X /
-        / X \
-      S3     S4
-         Back
-    """
-    # Normalize inputs
-    roll_correction = constrain(roll_angle, -max_tilt, max_tilt)
-    pitch_correction = constrain(pitch_angle, -max_tilt, max_tilt)
-    
-    # Base angle (90° = neutral position)
-    base = 90
-    
-    # Calculate servo angles
-    s1 = base - roll_correction + pitch_correction  # Front-right
-    s2 = base + roll_correction + pitch_correction  # Front-left
-    s3 = base + roll_correction - pitch_correction  # Back-left
-    s4 = base - roll_correction - pitch_correction  # Back-right
-    
-    # Constrain to servo range (0-180°)
-    servos = [
-        constrain(s1, 0, 180),
-        constrain(s2, 0, 180),
-        constrain(s3, 0, 180),
-        constrain(s4, 0, 180)
-    ]
-    
-    return servos
-```
-
-**Step 3: PWM Output (ESP32)**
-
-```cpp
-// Arduino/ESP32 Code
-#include <ESP32Servo.h>
-
-Servo servo1, servo2, servo3, servo4;
-
-void setup() {
-    // ESC PWM pins (50Hz)
-    ledcSetup(0, 50, 16);  // Channel 0, 50Hz, 16-bit resolution
-    ledcAttachPin(25, 0);  // Motor 1
-    ledcAttachPin(26, 1);  // Motor 2
-    ledcAttachPin(27, 2);  // Motor 3
-    ledcAttachPin(14, 3);  // Motor 4
-    
-    // Servo pins
-    servo1.attach(32);  // Servo 1
-    servo2.attach(33);  // Servo 2
-    servo3.attach(18);  // Servo 3
-    servo4.attach(19);  // Servo 4
-}
-
-void setMotorSpeed(int motor, int pwm) {
-    // PWM: 1000-2000μs
-    int dutyCycle = map(pwm, 1000, 2000, 3277, 6553);  // 16-bit
-    ledcWrite(motor, dutyCycle);
-}
-
-void setServoAngle(Servo& servo, int angle) {
-    // Angle: 0-180°
-    servo.write(constrain(angle, 0, 180));
-}
-```
-
-### 7.4 Communication Protocol Implementation
-
-**Step 1: MAVLink Setup (Python GCS)**
-
-```python
-from pymavlink import mavutil
-import time
-
-class DroneConnection:
-    def __init__(self, connection_string='udp:0.0.0.0:14550'):
-        self.master = mavutil.mavlink_connection(connection_string)
-        self.wait_heartbeat()
-    
-    def wait_heartbeat(self):
-        """รอ heartbeat จาก drone"""
-        print("Waiting for heartbeat...")
-        self.master.wait_heartbeat()
-        print(f"Heartbeat from system {self.master.target_system}")
-    
-    def send_attitude_setpoint(self, roll, pitch, yaw, thrust):
-        """ส่งคำสั่งควบคุมทิศทาง"""
-        self.master.mav.set_attitude_target_send(
-            0,                          # time_boot_ms
-            self.master.target_system,  # target system
-            self.master.target_component,
-            0b00000111,                 # type mask (ignore rates)
-            self.to_quaternion(roll, pitch, yaw),
-            0, 0, 0,                    # body roll rate, pitch rate, yaw rate
-            thrust                      # thrust [0-1]
-        )
-    
-    def receive_telemetry(self):
-        """รับข้อมูล telemetry"""
-        msg = self.master.recv_match(blocking=False)
-        if msg:
-            msg_type = msg.get_type()
-            if msg_type == 'ATTITUDE':
-                return {
-                    'roll': msg.roll,
-                    'pitch': msg.pitch,
-                    'yaw': msg.yaw,
-                    'rollspeed': msg.rollspeed,
-                    'pitchspeed': msg.pitchspeed,
-                    'yawspeed': msg.yawspeed
-                }
-        return None
-```
-
-**Step 2: Ground Control Station GUI**
-
-```python
-import tkinter as tk
-from tkinter import ttk
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import numpy as np
-
-class GroundControlStation:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Thrust Vectoring Drone GCS")
-        self.drone = DroneConnection()
-        
-        self.create_widgets()
-        self.update_telemetry()
-    
-    def create_widgets(self):
-        # Control Panel
-        control_frame = ttk.LabelFrame(self.root, text="Manual Control")
-        control_frame.grid(row=0, column=0, padx=10, pady=10)
-        
-        # Throttle slider
-        ttk.Label(control_frame, text="Throttle:").grid(row=0, column=0)
-        self.throttle_slider = ttk.Scale(control_frame, from_=0, to=100, orient='vertical')
-        self.throttle_slider.grid(row=1, column=0)
-        
-        # Roll/Pitch control
-        ttk.Label(control_frame, text="Roll/Pitch:").grid(row=0, column=1)
-        self.attitude_canvas = tk.Canvas(control_frame, width=200, height=200, bg='white')
-        self.attitude_canvas.grid(row=1, column=1)
-        self.attitude_canvas.bind('<B1-Motion>', self.on_attitude_drag)
-        
-        # Telemetry Display
-        telemetry_frame = ttk.LabelFrame(self.root, text="Telemetry")
-        telemetry_frame.grid(row=0, column=1, padx=10, pady=10)
-        
-        self.telemetry_labels = {}
-        for i, param in enumerate(['Roll', 'Pitch', 'Yaw', 'Altitude', 'Battery']):
-            ttk.Label(telemetry_frame, text=f"{param}:").grid(row=i, column=0, sticky='w')
-            label = ttk.Label(telemetry_frame, text="0.0")
-            label.grid(row=i, column=1, sticky='w')
-            self.telemetry_labels[param] = label
-        
-        # Attitude Indicator
-        attitude_frame = ttk.LabelFrame(self.root, text="Attitude")
-        attitude_frame.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
-        
-        self.fig, self.ax = plt.subplots(figsize=(6, 3))
-        self.canvas = FigureCanvasTkAgg(self.fig, master=attitude_frame)
-        self.canvas.get_tk_widget().pack()
-        
-        # PID Tuning
-        pid_frame = ttk.LabelFrame(self.root, text="PID Tuning")
-        pid_frame.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
-        
-        self.pid_entries = {}
-        for i, axis in enumerate(['Roll', 'Pitch', 'Yaw']):
-            ttk.Label(pid_frame, text=f"{axis}:").grid(row=i, column=0)
-            for j, param in enumerate(['P', 'I', 'D']):
-                entry = ttk.Entry(pid_frame, width=10)
-                entry.grid(row=i, column=j+1)
-                self.pid_entries[f"{axis}_{param}"] = entry
-        
-        ttk.Button(pid_frame, text="Update PID", command=self.update_pid).grid(row=3, column=0, columnspan=4)
-    
-    def update_telemetry(self):
-        """อัพเดท telemetry display"""
-        telemetry = self.drone.receive_telemetry()
-        if telemetry:
-            self.telemetry_labels['Roll'].config(text=f"{np.degrees(telemetry['roll']):.1f}°")
-            self.telemetry_labels['Pitch'].config(text=f"{np.degrees(telemetry['pitch']):.1f}°")
-            self.telemetry_labels['Yaw'].config(text=f"{np.degrees(telemetry['yaw']):.1f}°")
-            
-            # Update attitude plot
-            self.plot_attitude(telemetry)
-        
-        self.root.after(50, self.update_telemetry)  # Update at 20Hz
-    
-    def plot_attitude(self, telemetry):
-        """Plot attitude indicator"""
-        self.ax.clear()
-        roll = np.degrees(telemetry['roll'])
-        pitch = np.degrees(telemetry['pitch'])
-        
-        # Draw horizon
-        self.ax.plot([-1, 1], [pitch/90, pitch/90], 'b-', linewidth=2)
-        
-        # Draw roll indicator
-        self.ax.plot([0, 0.5*np.sin(telemetry['roll'])], 
-                     [0, 0.5*np.cos(telemetry['roll'])], 'r-', linewidth=3)
-        
-        self.ax.set_xlim(-1, 1)
-        self.ax.set_ylim(-1, 1)
-        self.ax.set_aspect('equal')
-        self.ax.grid(True)
-        self.canvas.draw()
-    
-    def on_attitude_drag(self, event):
-        """Handle attitude control drag"""
-        x = (event.x - 100) / 100  # Normalize to [-1, 1]
-        y = -(event.y - 100) / 100
-        
-        roll = x * 30  # Max 30° roll
-        pitch = y * 30  # Max 30° pitch
-        
-        throttle = self.throttle_slider.get()
-        self.drone.send_attitude_setpoint(
-            np.radians(roll),
-            np.radians(pitch),
-            0,  # Yaw rate
-            throttle / 100
-        )
-    
-    def update_pid(self):
-        """ส่งค่า PID ไปยัง drone"""
-        # Implementation for sending PID parameters
-        pass
-
-if __name__ == '__main__':
-    root = tk.Tk()
-    app = GroundControlStation(root)
-    root.mainloop()
-```
+แสดงผล real-time:
+- ตำแหน่งและทิศทางของ drone
+- TF transformations
+- Joint states (fin angles)
+- Trajectory path
 
 ---
 
-## 8. การใช้งาน
+## 💻 Installation & Setup
 
-### 8.1 ความต้องการของระบบ
+### Prerequisites
 
-**Hardware:**
+**Hardware Requirements:**
+- Drone hardware with flight controller
+- WiFi module for communication
+- Sensors: IMU, GPS, TOF, OLED
+- 4x Servos + ESC + Ducted fan
 
-```
-- ESP32/STM32 Development Board
-- IMU Module (MPU6050/MPU9250)
-- 4x Brushless Motors (1000-1500KV)
-- 4x ESC (20A-30A)
-- 4x Servo Motors (MG90S or similar)
-- 3S LiPo Battery (2200-3000mAh)
-- RC Receiver (Optional)
-- Frame และ mechanical parts
-```
+**Software Requirements:**
+- Ubuntu 22.04 (Jammy)
+- ROS2 Humble
+- Python 3.10+
+- Gazebo (for simulation)
 
-**Software:**
+### Installation Steps
 
-```
-Python 3.8 or higher
-Arduino IDE / PlatformIO
-```
-
-**Python Libraries:**
+#### 1. Install ROS2 Humble
 
 ```bash
-pip install pymavlink
+# Setup sources
+sudo apt update && sudo apt install locales
+sudo locale-gen en_US en_US.UTF-8
+sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+export LANG=en_US.UTF-8
+
+# Setup ROS2 repository
+sudo apt install software-properties-common
+sudo add-apt-repository universe
+sudo apt update && sudo apt install curl -y
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+
+# Install ROS2 Humble
+sudo apt update
+sudo apt install ros-humble-desktop
+```
+
+#### 2. Install Dependencies
+
+```bash
+# ROS2 packages
+sudo apt install ros-humble-gazebo-ros-pkgs
+sudo apt install ros-humble-rviz2
+sudo apt install ros-humble-robot-state-publisher
+sudo apt install ros-humble-joint-state-publisher
+sudo apt install ros-humble-teleop-twist-keyboard
+
+# Python packages
+pip install numpy scipy matplotlib
 pip install pyserial
-pip install numpy
-pip install matplotlib
-pip install PyQt5
-pip install smbus2
 ```
 
-**Arduino Libraries:**
-
-```
-ESP32Servo
-Wire (I2C)
-WiFi
-MAVLink
-```
-
-### 8.2 การติดตั้ง
-
-**Step 1: Clone Repository**
+#### 3. Clone and Build Workspace
 
 ```bash
-git clone https://github.com/yourusername/thrust-vectoring-drone.git
-cd thrust-vectoring-drone
+# Create workspace
+mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws/src
+
+# Clone repository
+git clone https://github.com/yourusername/thrust_vectoring_drone.git
+
+# Build workspace
+cd ~/ros2_ws
+colcon build --symlink-install
+
+# Source workspace
+source ~/ros2_ws/install/setup.bash
 ```
 
-**Step 2: ติดตั้ง Dependencies**
+#### 4. Configure Network
+
+**On Drone (Client):**
+```bash
+# Edit network config
+sudo nano /etc/netplan/01-netcfg.yaml
+
+# Add WiFi configuration
+network:
+  version: 2
+  wifis:
+    wlan0:
+      dhcp4: no
+      addresses: [192.168.1.100/24]
+      gateway4: 192.168.1.1
+      nameservers:
+        addresses: [8.8.8.8]
+
+# Apply config
+sudo netplan apply
+```
+
+**On PC (Agent):**
+```bash
+# Set ROS_DOMAIN_ID
+echo "export ROS_DOMAIN_ID=0" >> ~/.bashrc
+
+# Set RMW implementation
+echo "export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp" >> ~/.bashrc
+
+source ~/.bashrc
+```
+
+---
+
+## 🎯 Usage
+
+### Running the System
+
+#### On Drone (Client)
 
 ```bash
-# Python dependencies
-pip install -r requirements.txt
+# Terminal 1: Launch drone nodes
+ros2 launch thrust_vectoring_drone drone_launch.py
 
-# Arduino libraries (ติดตั้งผ่าน Arduino Library Manager)
+# Terminal 2: Start flight controller
+ros2 run thrust_vectoring_drone flight_controller_node
+
+# Terminal 3: Monitor sensors
+ros2 topic echo /drone/pose
+ros2 topic echo /drone/angle
 ```
 
-**Step 3: Upload Firmware**
+#### On PC (Agent)
 
 ```bash
-# เปิดไฟล์ flight_controller.ino ใน Arduino IDE
-# เลือก Board: ESP32 Dev Module
-# เลือก Port และ Upload
+# Terminal 1: Launch RVIZ2
+ros2 launch thrust_vectoring_drone rviz_launch.py
+
+# Terminal 2: Start teleop
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+
+# Terminal 3: Monitor topics
+ros2 topic list
+ros2 topic echo /cmd_vel
 ```
 
-**Step 4: กำหนดค่า WiFi**
+### Control Commands
 
-```cpp
-// ในไฟล์ config.h
-#define WIFI_SSID "your_wifi_name"
-#define WIFI_PASSWORD "your_password"
-#define GCS_IP "192.168.1.100"  // IP ของ Ground Station
+**Keyboard Teleoperation:**
+```
+Moving around:
+   u    i    o
+   j    k    l
+   m    ,    .
+
+q/z : increase/decrease max speeds by 10%
+w/x : increase/decrease only linear speed by 10%
+e/c : increase/decrease only angular speed by 10%
+
+CTRL-C to quit
 ```
 
-### 8.3 การปรับแต่ง
+**ROS2 Commands:**
 
-**Calibrate IMU:**
+```bash
+# Set velocity
+ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
 
-1. วาง drone บนพื้นราบ
-2. เปิด Serial Monitor
-3. ส่งคำสั่ง "CAL" เพื่อ calibrate accelerometer
-4. หมุน drone ในทุกทิศทางเพื่อ calibrate magnetometer
+# Check drone status
+ros2 topic echo /drone/pose
+ros2 topic echo /drone/angle
 
-**Tune PID Parameters:**
-
-1. เริ่มจากค่า conservative (P=1.0, I=0.0, D=0.0)
-2. เพิ่ม P จนกว่า drone จะเริ่ม oscillate
-3. ลด P ลง 30% และเพิ่ม D เพื่อลด overshoot
-4. เพิ่ม I เล็กน้อยเพื่อแก้ steady-state error
-5. ทดสอบและปรับแต่งจนได้ response ที่ต้องการ
-
-**ESC Calibration:**
-
-```
-1. ปิด power ทั้งหมด
-2. ตั้ง throttle เป็น maximum
-3. เปิด power
-4. รอเสียง beep
-5. ตั้ง throttle เป็น minimum
-6. รอเสียง confirmation
-7. ทดสอบ throttle range
+# View TF tree
+ros2 run tf2_tools view_frames
 ```
 
-### 8.4 การใช้งานระบบ
+### Gazebo Simulation
 
-**Mode การบิน:**
+```bash
+# Launch Gazebo simulation
+ros2 launch thrust_vectoring_drone gazebo_launch.py
 
-1. **STANDBY**: ระบบพร้อม, motors ปิด
-2. **ARMED**: ระบบ armed, motors idle
-3. **STABILIZE**: ควบคุมด้วย PID, pilot controls attitude
-4. **ALTITUDE HOLD**: รักษาความสูง
-5. **MANUAL**: ควบคุมแบบ manual (no stabilization)
+# In another terminal, run controller
+ros2 run thrust_vectoring_drone lqr_controller_node
 
-**การบิน:**
-
-```
-1. เปิด Ground Control Station
-2. เชื่อมต่อกับ drone (WiFi)
-3. ตรวจสอบ telemetry และ sensors
-4. Arm motors (Safety switch)
-5. เพิ่ม throttle ค่อย ๆ สำหรับ takeoff
-6. ควบคุมด้วย attitude commands
-7. Landing: ลด throttle ค่อย ๆ
-8. Disarm motors
+# Monitor odometry
+ros2 topic echo /odom
 ```
 
-**การใช้ GCS:**
+### Flight Modes
 
-```
-1. เปิดโปรแกรม:
-   python ground_control_station.py
-
-2. กรอก IP ของ drone
-3. กดปุ่ม "Connect"
-4. Monitor telemetry แบบ real-time
-5. ปรับแต่ง PID parameters (ถ้าต้องการ)
-6. ส่งคำสั่งผ่าน manual control หรือ RC
-7. Save flight logs สำหรับวิเคราะห์
+#### 1. Manual Mode
+```bash
+ros2 service call /drone/set_mode std_srvs/srv/SetBool "{data: false}"
 ```
 
-**Safety Features:**
+#### 2. Stabilize Mode
+```bash
+ros2 service call /drone/set_mode std_srvs/srv/SetBool "{data: true}"
+```
 
-- Low battery warning (< 10.5V)
-- Failsafe (loss of signal → land mode)
-- Emergency stop (kill switch)
-- Angle limits (roll/pitch < 45°)
-- Auto-disarm (no movement for 5s)
-
-### 8.5 Troubleshooting
-
-**ปัญหาที่พบบ่อย:**
-
-| ปัญหา | สาเหตุที่เป็นไปได้ | แก้ไข |
-|-------|------------------|------|
-| Drone ไม่ตอบสนอง | ไม่ได้ arm motors | กด safety switch |
-| Oscillation | PID values สูงเกินไป | ลด P และ D |
-| Drift | IMU not calibrated | Calibrate IMU ใหม่ |
-| One motor ไม่หมุน | ESC/Motor failure | ตรวจสอบ connections |
-| Connection lost | WiFi signal weak | ลดระยะห่าง หรือใช้ LoRa |
-
-**Debug Mode:**
-
-```cpp
-// Enable debug output
-#define DEBUG_MODE 1
-
-// ใน Serial Monitor จะแสดง:
-// - Sensor values
-// - PID outputs
-// - Motor speeds
-// - Servo angles
+#### 3. Position Hold
+```bash
+ros2 topic pub /drone/setpoint geometry_msgs/msg/Point "{x: 0.0, y: 0.0, z: 1.0}"
 ```
 
 ---
 
-## ผู้พัฒนา
+## 📸 Gallery
 
-- **ชื่อ นามสกุล** - รหัสนักศึกษา 664XXXXXXX
-- **ชื่อ นามสกุล** - รหัสนักศึกษา 664XXXXXXX
+### RVIZ2 Visualization
+![RVIZ2 Display](images/rviz2_display.png)
 
----
+### Prototype Testing
+![Prototype Drone](images/prototype_drone.png)
 
-## License
+### Flight Testing
+![Drone Flight](images/drone_flight.png)
 
-This project is licensed under the MIT License - see the LICENSE file for details
-
----
-
-## Acknowledgments
-
-- Robotics Toolbox for Python
-- PX4 และ ArduPilot communities
-- MAVLink Protocol developers
-- ESP32 Arduino Core
+### Station Test
+![Test Stand](images/test_stand.png)
 
 ---
 
-## อ้างอิง
+## 📚 References
 
-1. Stevens, B. L., & Lewis, F. L. (2003). *Aircraft Control and Simulation*. Wiley.
-2. Beard, R. W., & McLain, T. W. (2012). *Small Unmanned Aircraft: Theory and Practice*. Princeton University Press.
-3. Mahony, R., et al. (2008). "Nonlinear Complementary Filters on the Special Orthogonal Group". *IEEE TAC*.
-4. MAVLink Documentation: https://mavlink.io/
-5. PX4 Developer Guide: https://dev.px4.io/
-message.txt
-message.txt (41 KB)
-41 KB
+1. **State Space Model & LQR Controller**
+   - Master Thesis: Emil Jacobsen
+   - https://vbn.aau.dk/ws/files/421577367/Master_Thesis_Emil_Jacobsen_v5.pdf
+
+2. **ROS2 Documentation**
+   - https://docs.ros.org/en/humble/
+
+3. **Kalman Filter Implementation**
+   - Welch, G., & Bishop, G. "An Introduction to the Kalman Filter"
+
+4. **Thrust Vectoring Control**
+   - Various academic papers on vectored thrust UAVs
+
+---
+
+## 👥 Team
+
+**Project Members:**
+- [Your Name] - Control Systems
+- [Team Member 2] - Hardware Design
+- [Team Member 3] - Software Development
+- [Team Member 4] - Testing & Integration
+
+**Advisor:**
+- [Advisor Name]
+
+---
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- ROS2 Community
+- Gazebo Development Team
+- Academic advisors and mentors
+- All contributors to this project
+
+---
+
+## 📧 Contact
+
+For questions or collaboration:
+- Email: your.email@university.edu
+- GitHub: https://github.com/yourusername/thrust_vectoring_drone
+
+---
+
+**Last Updated:** 02 December, 2025
