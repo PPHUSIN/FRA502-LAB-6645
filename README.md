@@ -1344,6 +1344,12 @@ y: 1.0
 z: 2.0" --once 
 ```
 
+```bash
+# Terminal 6: Teleop Setpoint Velocity in Simulation
+source install/setup.bash
+ros2 run drone teleop_sim.py
+```
+
 ### Control Commands (Velocity Setpoint)
 
 **🖥️ Simulation Teleop (teleop_sim.py):**
