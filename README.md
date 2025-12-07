@@ -353,7 +353,7 @@ Thrust Vane คือ "ครีบบังคับทิศทาง" ที�
 
 เราได้เลือก Thrust Vane ที่เป็นรูปร่างแบบ Joukowski 9%
 
-airfoilcad.png
+![Alt text](airfoilcad.png)
 
 Joukowski 9% หมายถึง
 f=0% คือ ความโค้งของเส้นเป็น 0 (สมมาตร)
@@ -365,7 +365,7 @@ t=9% คือ ความหนาสูงสุดของ airfoil
 
 จากข้อมูลที่จำลองด้วย XFoil:
 
-airfoil.png
+![Alt text](airfoil.png)
 
 | ค่า | ความหมาย | ประโยชน์ |
 |-----|----------|----------|
