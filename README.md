@@ -1233,22 +1233,26 @@ source ~/.bashrc
 
 ```bash
 # Terminal 1: Launch Gazebo simulation
+source install/setup.bash
 ros2 launch drone_gazebo simulation_launch.py
 ```
 
 ```bash
 # Terminal 2: Launch Rviz
+source install/setup.bash
 ros2 launch drone drone.launch.py
 ```
 
 ```bash
 # Terminal 3: Select Comtrol Mode
+source install/setup.bash
 ros2 topic pub /drone/control_mode std_msgs/msg/String "data: 'POSITION'" --once 
 ros2 topic pub /drone/control_mode std_msgs/msg/String "data: 'VELOCITY'" --once 
 ```
 
 ```bash
 # Terminal 4: Setpoint Position
+source install/setup.bash
 ros2 topic pub /drone/setpoint geometry_msgs/msg/Twist "linear:
   x: 1.0
   y: 1.0
@@ -1261,6 +1265,7 @@ angular:
 
 ```bash
 # Terminal 5: Setpoint Velocity
+source install/setup.bash
 ros2 topic pub /drone/velocity_setpoint geometry_msgs/msg/Vector3 "x: 2.0
 y: 1.0
 z: 2.0" --once 
