@@ -1175,6 +1175,7 @@ sudo apt install ros-humble-desktop
 ```bash
 # ROS2 packages
 sudo apt install ros-humble-gazebo-ros-pkgs
+sudo apt install ros-humble-gazebo-plugins
 sudo apt install ros-humble-rviz2
 sudo apt install ros-humble-robot-state-publisher
 sudo apt install ros-humble-joint-state-publisher
