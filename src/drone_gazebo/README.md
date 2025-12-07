@@ -171,18 +171,6 @@ Lift = q * A_fin * CL_alpha * angle
 - **Position Accuracy**: ~2cm steady-state
 - **Response Time**: <0.5s for attitude, <2s for position
 
-### Stability Margins
-- **Roll/Pitch Bandwidth**: ~10 Hz
-- **Yaw Bandwidth**: ~3 Hz
-- **Position Loop**: ~1 Hz
-- **Stability Margin**: 60° phase margin, 10dB gain margin
-
-### Control Authority
-- **Roll Control Power**: 0.013 Nm/rad
-- **Pitch Control Power**: 0.013 Nm/rad  
-- **Yaw Control Power**: 0.008 Nm/rad
-- **Maximum Roll/Pitch Rate**: ~50°/s
-- **Maximum Yaw Rate**: ~30°/s
 
 ## Gain Tuning Guidelines
 
