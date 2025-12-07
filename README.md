@@ -470,31 +470,6 @@ $$Q_{pos} = \text{diag}\left( \frac{1}{0.5^2}, \frac{1}{0.5^2}, \frac{1}{1^2}, \
 | `/drone/velocity_setpoint` | geometry_msgs/Vector3 | teleop_sim | **Drone** (setpoint) |
 | `/robot_description` | std_msgs/String | robot_state_publisher | RVIZ2 |
 
-#### Running Simulation
-
-```bash
-# Terminal 1: Launch Gazebo simulation
-ros2 launch thrust_vectoring_drone gazebo_launch.py
-
-# Terminal 2: Launch RVIZ2
-ros2 launch thrust_vectoring_drone rviz_launch.py
-
-# Terminal 3: Start drone pose node (simulation)
-ros2 run thrust_vectoring_drone drone_pose_sim.py
-
-# Terminal 4: Start fin sim node
-ros2 run thrust_vectoring_drone fin_sim.py
-
-# Terminal 5: Start teleop (simulation)
-ros2 run thrust_vectoring_drone teleop_sim.py
-
-# Terminal 6: Monitor topics
-ros2 topic echo /odom
-ros2 topic echo /tf
-```
-
----
-
 ### 🚁 Real Hardware Mode (ESP32 + MicroROS)
 
 > **สถานะ:** ⏳ อยู่ระหว่างการพัฒนา - **ไฟล์ถูกสร้างไว้แล้วแต่ยังไม่ได้ทดสอบกับฮาร์ดแวร์จริง**
