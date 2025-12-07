@@ -676,32 +676,6 @@ dt = 0.01s (100 Hz)  # Update rate for pose calculation
 | `/cmd_vel` | geometry_msgs/Twist | teleop | **Drone** (setpoint), drone_pose |
 | `/drone/setpoint` | geometry_msgs/Point | PC | **ESP32** |
 
-#### Running Real Hardware
-
-```bash
-# Terminal 1: Start MicroROS Agent
-ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888
-
-# Terminal 2: Launch RVIZ2 (Real Hardware config)
-ros2 launch thrust_vectoring_drone rviz_real_launch.py
-
-# Terminal 3: Start drone pose node (real hardware)
-ros2 run thrust_vectoring_drone drone_pose.py
-
-# Terminal 4: Start fin angle node
-ros2 run thrust_vectoring_drone fin_angle.py
-
-# Terminal 5: Start teleop (real hardware)
-ros2 run thrust_vectoring_drone teleop.py
-
-# Terminal 6: Monitor drone status
-ros2 topic echo /drone/pose
-ros2 topic echo /drone/angle
-ros2 topic echo /fin_angle
-```
-
----
-
 ### 📊 Mode Comparison
 
 #### Python Files Comparison
@@ -1151,80 +1125,6 @@ blinkLED(color, times, duration)     // กระพริบ
 | อัตรา Publish ROS | 100 Hz |
 | อัตราอัปเดต GPS | 1 Hz |
 | Refresh จอแสดงผล | 2 Hz |
-
-## ฟีเจอร์ความปลอดภัย
-
-1. **Watchdog Timer** - รีสตาร์ทอัตโนมัติเมื่อค้าง
-2. **WiFi Connection Monitor** - เชื่อมต่อใหม่อัตโนมัติ
-3. **Emergency Stop** - คำสั่ง Serial `stop`
-4. **ESC Arming Delay** - ช่วงเวลาปลอดภัย 3 วินาที
-5. **Servo Range Limiting** - จำกัดเอียงสูงสุด ±10°
-6. **Thruster Ramp Rate** - เพิ่มกำลังทีละน้อย (2% ต่อรอบ)
-
-## โครงสร้างโค้ด
-
-```
-esp32_firmware/
-├── main.cpp              # โปรแกรมหลักพร้อม dual-core task setup
-├── imu.cpp/h            # จัดการเซนเซอร์ IMU
-├── Actuator.cpp/h       # ควบคุมเซอร์โว/ESC
-├── kalman.cpp/h         # ประมาณค่าสถานะ
-├── lqr_hover.cpp/h      # ค่า Gain ควบคุม
-├── gps_handler.cpp/h    # ประมวลผล GPS
-├── Tof.cpp/h            # เซนเซอร์วัดความสูง ToF
-├── microros_handler.cpp/h  # สื่อสาร ROS2
-├── wifi_manager.cpp/h   # การเชื่อมต่อ WiFi
-├── oled_display.cpp/h   # ไดรเวอร์จอแสดงผล
-└── led_status.cpp/h     # ควบคุม LED สถานะ
-```
----
-
-## 🎯 Expected Results
-
-### Performance Targets
-
-1. **การควบคุมท่าทาง (Attitude Control)**
-   - สามารถควบคุมโดรนให้ควบคุมองศาของตัวเองได้
-   - **Target Error:** ≤ ±10 degrees (Roll, Pitch, Yaw)
-
-2. **การควบคุมความสูง (Altitude Control)**  
-   - ตัวโดรนสามารถรักษาตำแหน่งความสูงที่กำหนดให้ได้
-   - **Target Error:** ≤ ±5 cm
-
-3. **การทรงตัว (Hovering Capability)**
-   - โดรนสามารถลอยตัวได้ด้วยการควบคุมแบบ Thrust Vectoring
-   - เสถียรภาพในการลอยตัวโดยไม่มีการเซาะด้วยตนเอง
-
-4. **ประสิทธิภาพการสื่อสาร (Communication Performance)**
-   - การสื่อสาร ROS2 ↔ MicroROS มีความเสถียรและหน่วงต่ำ
-   - Latency < 50ms สำหรับ critical commands
-
-5. **ความทนทานต่อสิ่งรบกวน (Disturbance Rejection)**
-   - PID สามารถรักษาสมดุลของโดรนได้ภายใต้ disturbance ขนาดเล็ก
-   - การตอบสนองต่อลมเบา ๆ หรือการเปลี่ยนแปลงโหลด
-
-6. **การแสดงผลแบบเรียลไทม์ (Real-time Visualization)**
-   - แสดงทิศทางแรงขับและท่าทางของโดรนใน Rviz ได้อย่างถูกต้อง
-   - การมอนิเตอร์สถานะแบบเรียลไทม์
-
-### Success Criteria
-
-✅ **Phase 1: System Integration**
-- MicroROS communication established
-- Basic sensor data acquisition
-- Servo control functional
-
-✅ **Phase 2: Control Implementation**  
-- PID controllers tuned and stable
-- Thrust vectoring mechanism working
-- Real-time performance achieved
-
-✅ **Phase 3: Flight Testing**
-- Successful hover for 30+ seconds  
-- Attitude control within error bounds
-- Safe landing and recovery
-
----
 
 ## 📅 Project Timeline
 
