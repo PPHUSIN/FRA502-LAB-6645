@@ -1157,7 +1157,34 @@ blinkLED(color, times, duration)     // กระพริบ
 | อัตราอัปเดต GPS | 1 Hz |
 | Refresh จอแสดงผล | 2 Hz |
 
-## 📅 Project Timeline
+##🎯 Expected Results
+### Performance Targets
+
+1. **การควบคุมท่าทาง (Attitude Control)**
+   - สามารถควบคุมโดรนให้ควบคุมองศาของตัวเองได้
+   - **Target Error:** ≤ ±10 degrees (Roll, Pitch, Yaw)
+
+2. **การควบคุมความสูง (Altitude Control)**  
+   - ตัวโดรนสามารถรักษาตำแหน่งความสูงที่กำหนดให้ได้
+   - **Target Error:** ≤ ±5 cm
+
+3. **การทรงตัว (Hovering Capability)**
+   - โดรนสามารถลอยตัวได้ด้วยการควบคุมแบบ Thrust Vectoring
+   - เสถียรภาพในการลอยตัวด้วยตนเอง
+
+4. **ประสิทธิภาพการสื่อสาร (Communication Performance)**
+   - การสื่อสาร ROS2 ↔ MicroROS มีความเสถียรและหน่วงต่ำ
+   - Latency < 50ms สำหรับ critical commands
+
+5. **ความทนทานต่อสิ่งรบกวน (Disturbance Rejection)**
+   - IQR สามารถรักษาสมดุลของโดรนได้ภายใต้ disturbance ขนาดเล็ก
+   - การตอบสนองต่อลมเบา ๆ หรือการเปลี่ยนแปลงโหลด
+
+6. **การแสดงผลแบบเรียลไทม์ (Real-time Visualization)**
+   - แสดงทิศทางแรงขับและท่าทางของโดรนใน Rviz ได้อย่างถูกต้อง
+   - การมอนิเตอร์สถานะแบบเรียลไทม์
+
+##📅 Project Timeline
 
 ### Development Schedule (6 Weeks)
 
@@ -1165,25 +1192,16 @@ blinkLED(color, times, duration)     // กระพริบ
 |------|-------|-------------|--------|
 | **Week 1** | ออกแบบโครงสร้างและระบบของโดรน<br>• Frame design<br>• Motor & ESC selection<br>• Flight controller planning | • CAD models<br>• Component list<br>• System architecture | ✅ Complete |
 | **Week 2** | ติดตั้งและตั้งค่า MicroROS บน ESP32<br>• ESP32 firmware development<br>• ROS2 setup on PC | • Working MicroROS node<br>• Basic communication test | ✅ Complete |
-| **Week 3** | พัฒนา Communication Code<br>• WiFi communication<br>• Topic structure<br>• Message protocols | • Stable MicroROS ↔ ROS2 link<br>• Real-time data exchange | 🔄 In Progress |
-| **Week 4** | พัฒนาระบบควบคุมการบินเบื้องต้น<br>• PID implementation<br>• Node/Topic/Service structure | • Flight control nodes<br>• Basic control algorithms | ⏳ Pending |
-| **Week 5** | ทดสอบระบบและปรับจูนพารามิเตอร์<br>• Sensor integration testing<br>• PID tuning<br>• Real flight tests | • Tuned parameters<br>• Flight test results<br>• Performance validation | ⏳ Pending |
-| **Week 6** | Final Integration & Documentation<br>• System optimization<br>• Documentation<br>• Project presentation | • Final demo<br>• Technical report<br>• Project presentation | ⏳ Pending |
+| **Week 3** | พัฒนา Communication Code<br>• WiFi communication<br>• Topic structure<br>• Message protocols | • Stable MicroROS ↔ ROS2 link<br>• Real-time data exchange | ✅ Complete |
+| **Week 4** | พัฒนาระบบควบคุมการบินเบื้องต้น<br>• IQR implementation<br>• Node/Topic/Service structure | • Flight control nodes<br>• Basic control algorithms | ✅ Complete |
+| **Week 5** | ทดสอบการส่งข้อมูล Sensor จาก Micro ROS ไปยัง ROS2 และทดสอบบินจริงเพ่ือปรับจูนพารามิเตอร์ <br>• Sensor integration testing<br>• IQR tuning<br>• Real flight tests | • Tuned parameters<br>• Flight test results<br>• Performance validation | 🔄 In Progress |
+| **Week 6** | Final Integration & Documentation<br>• System optimization<br>• Documentation<br>• Project presentation | • Final demo<br>• Technical report<br>• Project presentation | 🔄 In Progress |
 
 ### Current Milestone Status
 
-🎯 **Current Focus: Week 3**
-- Establishing robust WiFi communication
-- Implementing MicroROS topic structure  
-- Testing real-time data exchange reliability
-- **🖥️ Simulation testing in Gazebo**
-
-📋 **Next Steps:**
-1. Complete communication stability testing
-2. Begin PID controller implementation  
-3. Integrate IMU sensor processing
-4. Develop servo control algorithms
-5. **🚁 Transition to real hardware testing**
+##🎯 Current Focus: Week 5 & Week 6
+1. ทดสอบการส่งข้อมูล Sensor ผ่าน MicroROS → ROS2
+2. ทดสอบบินจริงและปรับจูน IQR parameters
 
 ---
 
