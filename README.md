@@ -1177,7 +1177,7 @@ blinkLED(color, times, duration)     // กระพริบ
    - Latency < 50ms สำหรับ critical commands
 
 5. **ความทนทานต่อสิ่งรบกวน (Disturbance Rejection)**
-   - IQR สามารถรักษาสมดุลของโดรนได้ภายใต้ disturbance ขนาดเล็ก
+   - LQR สามารถรักษาสมดุลของโดรนได้ภายใต้ disturbance ขนาดเล็ก
    - การตอบสนองต่อลมเบา ๆ หรือการเปลี่ยนแปลงโหลด
 
 6. **การแสดงผลแบบเรียลไทม์ (Real-time Visualization)**
@@ -1193,15 +1193,14 @@ blinkLED(color, times, duration)     // กระพริบ
 | **Week 1** | ออกแบบโครงสร้างและระบบของโดรน<br>• Frame design<br>• Motor & ESC selection<br>• Flight controller planning | • CAD models<br>• Component list<br>• System architecture | ✅ Complete |
 | **Week 2** | ติดตั้งและตั้งค่า MicroROS บน ESP32<br>• ESP32 firmware development<br>• ROS2 setup on PC | • Working MicroROS node<br>• Basic communication test | ✅ Complete |
 | **Week 3** | พัฒนา Communication Code<br>• WiFi communication<br>• Topic structure<br>• Message protocols | • Stable MicroROS ↔ ROS2 link<br>• Real-time data exchange | ✅ Complete |
-| **Week 4** | พัฒนาระบบควบคุมการบินเบื้องต้น<br>• IQR implementation<br>• Node/Topic/Service structure | • Flight control nodes<br>• Basic control algorithms | ✅ Complete |
-| **Week 5** | ทดสอบการส่งข้อมูล Sensor จาก Micro ROS ไปยัง ROS2 และทดสอบบินจริงเพ่ือปรับจูนพารามิเตอร์ <br>• Sensor integration testing<br>• IQR tuning<br>• Real flight tests | • Tuned parameters<br>• Flight test results<br>• Performance validation | 🔄 In Progress |
-| **Week 6** | Final Integration & Documentation<br>• System optimization<br>• Documentation<br>• Project presentation | • Final demo<br>• Technical report<br>• Project presentation | 🔄 In Progress |
+| **Week 4** | พัฒนาระบบควบคุมการบินเบื้องต้น<br>• LQR implementation<br>• Node/Topic/Service structure | • Flight control nodes<br>• Basic control algorithms | ✅ Complete |
+| **Week 5** | ทดสอบการส่งข้อมูล Sensor จาก Micro ROS ไปยัง ROS2 และทดสอบบินจริงเพ่ือปรับจูนพารามิเตอร์ <br>• Sensor integration testing<br>• LQR tuning<br>• Real flight tests | • Tuned parameters<br>• Flight test results<br>• Performance validation | 🔄 In Progress |
 
 ### Current Milestone Status
 
-## 🎯 Current Focus: Week 5 & Week 6
+## 🎯 Current Focus: Week 5 
 1. ทดสอบการส่งข้อมูล Sensor ผ่าน MicroROS → ROS2
-2. ทดสอบบินจริงและปรับจูน IQR parameters
+2. ทดสอบบินจริงและปรับจูน LQR parameters
 
 ---
 
@@ -1403,11 +1402,11 @@ Velocity Setpoint (Body Drone Frame):
 **Institute of Field Robotics, King Mongkut's University of Technology Thonburi**
 
 **Project Members:**
-- **คุณานนต์ เศวตคชกุล** (66340500006) - System Architecture & Control
-- **นาราชล นรากุลพัชร์** (66340500027) - Hardware Design & Integration  
-- **ภูษิญ ประเสริฐสม** (66340500045) - Software Development & ROS2
-- **วิชาญ วิชญานุภาพ** (66340500051) - MicroROS & ESP32 Firmware
-- **ปวริศ ตั้งตระกูล** (66340500074) - Testing & Validation
+- **คุณานนต์ เศวตคชกุล** (66340500006) 
+- **นาราชล นรากุลพัชร์** (66340500027) 
+- **ภูษิญ ประเสริฐสม** (66340500045) 
+- **วิชาญ วิชญานุภาพ** (66340500051) 
+- **ปวริศ ตั้งตระกูล** (66340500074) 
 
 **Institution:**
 - Institute of Field Robotics
