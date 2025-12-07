@@ -170,15 +170,7 @@ Lift = q * A_fin * CL_alpha * angle
 
 ### Installation
 ```bash
-# Clone to your ROS2 workspace
-cd ~/ros2_ws/src
-git clone <repository_url> drone_gazebo
-
-# Install dependencies
-cd ~/ros2_ws
-rosdep install --from-paths src --ignore-src -r -y
-
-# Build the package
+cd ~[your-workspace]
 colcon build --packages-select drone_gazebo
 source install/setup.bash
 ```
