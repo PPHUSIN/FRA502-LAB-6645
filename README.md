@@ -73,52 +73,20 @@
 
 ### System Overview
 
-โปรเจกต์นี้มี 2 โหมดการทำงาน:
+โปรเจกต์นี้มีขั้นตอนการทดสอบ 2 โหมด:
 
 | Mode | Description | Data Source | Use Case |
 |------|-------------|-------------|----------|
 | **🖥️ Simulation** | ทดสอบใน Gazebo | Gazebo Physics Engine | Development & Testing |
 | **🚁 Real Hardware** | บินจริงด้วย ESP32 | ESP32 + MicroROS + Sensors | Real Flight |
 
-### System Components Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      THRUST VECTORING DRONE SYSTEM                  │
-├─────────────────────────────┬───────────────────────────────────────┤
-│      🖥️ SIMULATION MODE     │      🚁 REAL HARDWARE MODE            │
-│         (Gazebo)            │      (ESP32 + MicroROS)               │
-├─────────────────────────────┼───────────────────────────────────────┤
-│                             │                                       │
-│  ┌───────────────────────┐  │     ┌───────────────────────┐        │
-│  │   GAZEBO SIMULATION   │  │     │   ESP32 + MicroROS    │        │
-│  │                       │  │     │                       │        │
-│  │  • Physics Engine     │  │     │  • IMU Sensor         │        │
-│  │  • Drone Model        │  │     │  • TOF Sensor         │        │
-│  │  • Environment        │  │     │  • PID Controller     │        │
-│  │                       │  │     │  • Servo Control      │        │
-│  │  Publishers:          │  │     │                       │        │
-│  │  • /odom              │  │     │  Publishers:          │        │
-│  │  • /tf                │  │     │  • /drone/pose        │        │
-│  └───────────┬───────────┘  │     │  • /drone/imu         │        │
-│              │              │     │  • /drone/status      │        │
-│              ▼              │     └───────────┬───────────┘        │
-│  ┌───────────────────────┐  │                 │                    │
-│  │    PC (ROS2 Nodes)    │  │            UDP  │ Wi-Fi              │
-│  │                       │  │                 ▼                    │
-│  │  • drone_pose_sim     │  │     ┌───────────────────────┐        │
-│  │  • fin_sim            │  │     │    PC (ROS2 Agent)    │        │
-│  │  • teleop_sim         │  │     │                       │        │
-│  └───────────┬───────────┘  │     │  • MicroROS Agent     │        │
-│              │              │     │  • RVIZ2              │        │
-│              ▼              │     │  • Teleop             │        │
-│  ┌───────────────────────┐  │     └───────────────────────┘        │
-│  │       RVIZ2           │  │                                       │
-│  └───────────────────────┘  │                                       │
-│                             │                                       │
-└─────────────────────────────┴───────────────────────────────────────┘
-```
-
+### System Overview
+![Alt text](overview.png)
+### System Architecture
+![Alt text](architecture.png)
+### System Diagram
+![Alt text](diagram.png)
 ---
 
 ## 📊 General Information
