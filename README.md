@@ -402,7 +402,7 @@ t=9% คือ ความหนาสูงสุดของ airfoil
 
 ### 🖥️ Simulation Mode (Gazebo)
 
-> **สถานะ:** ✅ ใช้งานอยู่ในปัจจุบันสำหรับการพัฒนาและทดสอบ(***โดยใช้ Gazebo classic สามารถอ่านรายละเอียดการใช้งาน simulation ได้ที่ README.md ใน package drone_gazebo***)
+> **สถานะ:** ✅ ใช้งานอยู่ในปัจจุบันสำหรับการพัฒนาและทดสอบ(***โดยใช้ Gazebo classic***)
 
 ในโหมด Simulation ข้อมูลทั้งหมดมาจาก **Gazebo Physics Engine** โดย RVIZ จะแสดงผลข้อมูลที่ได้จาก simulation
 
@@ -909,7 +909,7 @@ Tewadon.updateStateWithMeasurements(state_pred, measurement, state_est);
 
 ### 4. การสื่อสารด้วย micro-ROS
 
-**การตั้งค่า**:
+**การตั้งค่า(ตั้งค่าตามอุปกรณ์นั้นๆ)**:
 ```cpp
 MicroROSConfig ros_config = {
     .agent_ip = "172.20.10.2",
@@ -1194,7 +1194,7 @@ blinkLED(color, times, duration)     // กระพริบ
 | **Week 2** | ติดตั้งและตั้งค่า MicroROS บน ESP32<br>• ESP32 firmware development<br>• ROS2 setup on PC | • Working MicroROS node<br>• Basic communication test | ✅ Complete |
 | **Week 3** | พัฒนา Communication Code<br>• WiFi communication<br>• Topic structure<br>• Message protocols | • Stable MicroROS ↔ ROS2 link<br>• Real-time data exchange | ✅ Complete |
 | **Week 4** | พัฒนาระบบควบคุมการบินเบื้องต้น<br>• LQR implementation<br>• Node/Topic/Service structure | • Flight control nodes<br>• Basic control algorithms | ✅ Complete |
-| **Week 5** | ทดสอบการส่งข้อมูล Sensor จาก Micro ROS ไปยัง ROS2 และทดสอบบินจริงเพ่ือปรับจูนพารามิเตอร์ <br>• Sensor integration testing<br>• LQR tuning<br>• Real flight tests | • Tuned parameters<br>• Flight test results<br>• Performance validation | 🔄 In Progress |
+| **Week 5** | ทดสอบการส่งข้อมูล Sensor จาก Micro ROS ไปยัง ROS2 และทดสอบบินจริงเพื่อปรับจูนพารามิเตอร์ <br>• Sensor integration testing<br>• LQR tuning<br>• Real flight tests | • Tuned parameters<br>• Flight test results<br>• Performance validation | 🔄 In Progress |
 
 ### Current Milestone Status
 
@@ -1439,10 +1439,8 @@ Copyright © 2025 by FIBO, KMUTT
 - **Course:** FIBO FRA502 – RoboticsDev Final Project 2025
 - **Location:** Bangkok, Thailand
 
-**Project Repository:**
-- GitHub: [Repository Link] (To be added)
 
 ---
 
-**Project Status:** 🔄 **Week 3 - Development in Progress (Simulation Mode)**  
+**Project Status:** 🔄 **Week 5 - Development in Progress (integrate and Flight Test)**  
 **Last Updated:** 06 December, 2025
