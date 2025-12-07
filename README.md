@@ -1191,19 +1191,15 @@ pip install pyserial
 #### 3. Clone and Build Workspace
 
 ```bash
-# Create workspace
-mkdir -p ~/ros2_ws/src
-cd ~/ros2_ws/src
-
 # Clone repository
-git clone https://github.com/yourusername/thrust_vectoring_drone.git
+git clone --branch Project https://github.com/PPHUSIN/FRA502-LAB-6645.git
+cd FRA502-LAB-6645/
 
 # Build workspace
-cd ~/ros2_ws
-colcon build --symlink-install
+colcon build
 
 # Source workspace
-source ~/ros2_ws/install/setup.bash
+source install/setup.bash
 ```
 
 #### 4. Configure Network (Real Hardware Only)
@@ -1236,49 +1232,37 @@ source ~/.bashrc
 
 ```bash
 # Terminal 1: Launch Gazebo simulation
-ros2 launch thrust_vectoring_drone gazebo_launch.py
-
-# Terminal 2: Launch RVIZ2
-ros2 launch thrust_vectoring_drone rviz_launch.py
-
-# Terminal 3: Start drone pose node (simulation version)
-ros2 run thrust_vectoring_drone drone_pose_sim.py
-
-# Terminal 4: Start fin sim node
-ros2 run thrust_vectoring_drone fin_sim.py
-
-# Terminal 5: Start teleop (simulation version)
-ros2 run thrust_vectoring_drone teleop_sim.py
-
-# Terminal 6: Monitor topics
-ros2 topic list
-ros2 topic echo /odom
+ros2 launch drone_gazebo simulation_launch.py
 ```
 
-### 🚁 Running Real Hardware Mode
-
-> ⚠️ **หมายเหตุ:** โหมดนี้ยังไม่ได้ทดสอบกับฮาร์ดแวร์จริง
+```bash
+# Terminal 2: Launch Rviz
+ros2 launch drone drone.launch.py
+```
 
 ```bash
-# Terminal 1: Start MicroROS Agent
-ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888
+# Terminal 3: Select Comtrol Mode
+ros2 topic pub /drone/control_mode std_msgs/msg/String "data: 'POSITION'" --once 
+ros2 topic pub /drone/control_mode std_msgs/msg/String "data: 'VELOCITY'" --once 
+```
 
-# Terminal 2: Launch RVIZ2 (real hardware config)
-ros2 launch thrust_vectoring_drone rviz_real_launch.py
+```bash
+# Terminal 4: Setpoint Position
+ros2 topic pub /drone/setpoint geometry_msgs/msg/Twist "linear:
+  x: 1.0
+  y: 1.0
+  z: 2.0
+angular:
+  x: 0.0
+  y: 0.0
+  z: 0.0" --once
+```
 
-# Terminal 3: Start drone pose node (real hardware version)
-ros2 run thrust_vectoring_drone drone_pose.py
-
-# Terminal 4: Start fin angle node
-ros2 run thrust_vectoring_drone fin_angle.py
-
-# Terminal 5: Start teleop (real hardware version)
-ros2 run thrust_vectoring_drone teleop.py
-
-# Terminal 6: Monitor drone
-ros2 topic echo /drone/angle
-ros2 topic echo /fin_angle
-ros2 topic echo /cmd_vel
+```bash
+# Terminal 5: Setpoint Velocity
+ros2 topic pub /drone/velocity_setpoint geometry_msgs/msg/Vector3 "x: 2.0
+y: 1.0
+z: 2.0" --once 
 ```
 
 ### Control Commands (Velocity Setpoint)
@@ -1297,7 +1281,7 @@ Velocity Setpoint (World Frame):
 
 **🚁 Real Hardware Teleop (teleop.py):**
 ```
-Velocity Setpoint (World Frame):
+Velocity Setpoint (Body Drone Frame):
    w : +X (Forward)     speed = 0.1 m/s (ช้ากว่าเพื่อความปลอดภัย)
    s : -X (Backward)
    a : +Y (Left)
@@ -1305,27 +1289,6 @@ Velocity Setpoint (World Frame):
    space : +Z (Up)
    c : -Z (Down)
    CTRL-C : Quit
-```
-
-### ROS2 Commands
-
-```bash
-# Check available topics
-ros2 topic list
-
-# === SIMULATION MODE ===
-ros2 topic echo /odom                    # Simulation position (Gazebo)
-ros2 topic echo /drone/velocity_setpoint # Velocity setpoint to drone
-ros2 topic echo /tf                      # TF transforms
-
-# === REAL HARDWARE MODE ===
-ros2 topic echo /drone/angle             # Attitude from ESP32
-ros2 topic echo /fin_angle               # Fin angles from ESP32
-ros2 topic echo /cmd_vel                 # Velocity setpoint to drone
-ros2 topic echo /fin_states              # JointState for RVIZ
-
-# View TF tree
-ros2 run tf2_tools view_frames
 ```
 
 ---
