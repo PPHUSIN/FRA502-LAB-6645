@@ -30,9 +30,9 @@
 
 โครงงานนี้มีวัตถุประสงค์เพื่อพัฒนา **Thrust Vectoring Drone** (โดรนแบบควบคุมทิศทางแรงขับ) ซึ่งสามารถควบคุมทิศทางของแรงขับเพื่อการทรงตัวและเคลื่อนที่ได้อย่างอิสระ โดยใช้ระบบ **ROS2** ร่วมกับ **MicroROS** เพื่อเชื่อมต่อการสื่อสารระหว่างคอมพิวเตอร์และไมโครคอนโทรลเลอร์ในแบบเรียลไทม์
 
-ระบบถูกออกแบบให้ฝั่งคอมพิวเตอร์ทำหน้าที่ส่งคำสั่งควบคุม (การขึ้นบิน, การเปลี่ยนทิศทาง, หรือการหยุดการทำงาน) ผ่าน Topic ส่วนฝั่งไมโครคอนโทรลเลอร์จะทำหน้าที่ประมวลผลทั้งหมด ได้แก่ การอ่านค่าจากเซนเซอร์ IMU, การคำนวณท่าทาง, และการควบคุมทิศทางของแรงขับด้วย PID Controller
+ระบบถูกออกแบบให้ฝั่งคอมพิวเตอร์ทำหน้าที่ส่งคำสั่งควบคุม (การขึ้นบิน, การเปลี่ยนทิศทาง, หรือการหยุดการทำงาน) ผ่าน Topic ส่วนฝั่งไมโครคอนโทรลเลอร์จะทำหน้าที่ประมวลผลทั้งหมด ได้แก่ การอ่านค่าจากเซนเซอร์ IMU, การคำนวณท่าทาง, และการควบคุมทิศทางของแรงขับด้วย LQR Controller
 
-**คำสำคัญ:** ROS2, MicroROS, Monorotor Drone, PID Controller, Real-Time Communication
+**คำสำคัญ:** ROS2, MicroROS, Monorotor Drone, LQR Controller, Real-Time Communication
 
 ---
 
@@ -109,7 +109,7 @@
 | **Attitude Control** | ±10 | degrees | Roll, Pitch, Yaw precision |
 | **Altitude Control** | ±5 | cm | Height maintenance accuracy |
 | **Communication** | Low latency | ms | ROS2 ↔ MicroROS stability |
-| **Disturbance Rejection** | Small | - | PID stability under wind |
+| **Disturbance Rejection** | Small | - | LQR stability under wind |
 
 ---
 
@@ -552,7 +552,7 @@ t=9% คือ ความหนาสูงสุดของ airfoil
 │  │                    FLIGHT CONTROLLER                         │  │
 │  │                                                              │  │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │  │
-│  │  │     IMU     │  │ TOF SENSOR  │  │ PID CONTROL │         │  │
+│  │  │     IMU     │  │ TOF SENSOR  │  │ LQR CONTROL │         │  │
 │  │  │  (MPU6050)  │  │             │  │             │         │  │
 │  │  │             │  │ • Altitude  │  │ • Roll      │         │  │
 │  │  │ • Roll      │  │             │  │ • Pitch     │         │  │
@@ -1199,7 +1199,7 @@ blinkLED(color, times, duration)     // กระพริบ
 
 ### Current Milestone Status
 
-##🎯 Current Focus: Week 5 & Week 6
+## 🎯 Current Focus: Week 5 & Week 6
 1. ทดสอบการส่งข้อมูล Sensor ผ่าน MicroROS → ROS2
 2. ทดสอบบินจริงและปรับจูน IQR parameters
 
