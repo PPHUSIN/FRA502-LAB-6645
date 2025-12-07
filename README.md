@@ -405,7 +405,7 @@ t=9% คือ ความหนาสูงสุดของ airfoil
 
 ### 🖥️ Simulation Mode (Gazebo)
 
-> **สถานะ:** ✅ ใช้งานอยู่ในปัจจุบันสำหรับการพัฒนาและทดสอบ
+> **สถานะ:** ✅ ใช้งานอยู่ในปัจจุบันสำหรับการพัฒนาและทดสอบ(***โดยใช้ Gazebo classic สามารถอ่านรายละเอียดการใช้งาน simulation ได้ที่ README.md ใน package drone_gazebo***)
 
 ในโหมด Simulation ข้อมูลทั้งหมดมาจาก **Gazebo Physics Engine** โดย RVIZ จะแสดงผลข้อมูลที่ได้จาก simulation
 
