@@ -1157,7 +1157,7 @@ blinkLED(color, times, duration)     // กระพริบ
 | อัตราอัปเดต GPS | 1 Hz |
 | Refresh จอแสดงผล | 2 Hz |
 
-##🎯 Expected Results
+## 🎯 Expected Results
 ### Performance Targets
 
 1. **การควบคุมท่าทาง (Attitude Control)**
@@ -1184,7 +1184,7 @@ blinkLED(color, times, duration)     // กระพริบ
    - แสดงทิศทางแรงขับและท่าทางของโดรนใน Rviz ได้อย่างถูกต้อง
    - การมอนิเตอร์สถานะแบบเรียลไทม์
 
-##📅 Project Timeline
+## 📅 Project Timeline
 
 ### Development Schedule (6 Weeks)
 
