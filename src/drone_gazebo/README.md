@@ -160,8 +160,6 @@ Lift = q * A_fin * CL_alpha * angle
 - **Pitch Torque**: τ_y = ±F_lift × L_vert (Fins 3,4)
 - **Yaw Torque**: τ_z = -F_lift × L_horz (All fins)
 
-```
-```
 
 ## Technical Specifications
 
