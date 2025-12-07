@@ -5,18 +5,17 @@ from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
 from tf2_ros import TransformBroadcaster
 from geometry_msgs.msg import TransformStamped, Twist
-from std_msgs.msg import Float64MultiArray
 from nav_msgs.msg import Odometry
+import math
 
 class DroneBridgeNode(Node):
 
     def __init__(self):
-        super().__init__('drone_pose_node')
+        super().__init__('drone_pose_sim_node')
 
         self.tf_broadcaster = TransformBroadcaster(self)
 
-        self.create_subscription(Float64MultiArray, '/drone/angle', self.angle_callback, 10)
-        self.create_subscription(Twist, "/cmd_vel", self.Drone_Velo_callback, 10)
+        self.create_subscription(Odometry, "/odom", self.drone_pose_callback, 10)
         
         self.get_logger().info('Drone Pose Started! Waiting for data from /drone/pose ...')
 
@@ -32,29 +31,21 @@ class DroneBridgeNode(Node):
         self.y = 0.0
         self.z = 0.0
 
-        self.dt = 0.01
+        self.rx = 0.0
+        self.ry = 0.0
+        self.rz = 0.0
 
-        self.timer = self.create_timer(self.dt, self.pub_timer)
+    def drone_pose_callback(self, msg):
+        self.x = msg.pose.pose.position.x
+        self.y = msg.pose.pose.position.y
+        self.z = msg.pose.pose.position.z
 
+        quat = msg.pose.pose.orientation
+        self.roll, self.pitch, self.yaw = self.euler_from_quaternion(quat.x, quat.y, quat.z, quat.w)
 
-    def Drone_Velo_callback(self, msg):
-        self.vx = msg.linear.x
-        self.vy = msg.linear.y
-        self.vz = msg.linear.z
+        self.pub_tf()
 
-    def angle_callback(self, msg):
-        self.roll = msg.data[0]
-        self.pitch = msg.data[1]
-        self.yaw = msg.data[2]
-
-    def cal_pose(self):
-        self.x += self.vx * self.dt
-        self.y += self.vy * self.dt
-        self.z += self.vz * self.dt
-
-    def pub_tf_drone(self):
-
-        self.cal_pose()
+    def pub_tf(self):
 
         t = TransformStamped()
 
@@ -73,8 +64,18 @@ class DroneBridgeNode(Node):
 
         self.tf_broadcaster.sendTransform(t)
 
-    def pub_timer(self):
-        self.pub_tf_drone()
+    def euler_from_quaternion(self, x, y, z, w):
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + y * y)
+        roll_x = math.atan2(t0, t1)
+        t2 = +2.0 * (w * y - z * x)
+        t2 = +1.0 if t2 > +1.0 else t2
+        t2 = -1.0 if t2 < -1.0 else t2
+        pitch_y = math.asin(t2)
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (y * y + z * z)
+        yaw_z = math.atan2(t3, t4)
+        return roll_x, pitch_y, yaw_z
 
 def main(args=None):
     rclpy.init(args=args)

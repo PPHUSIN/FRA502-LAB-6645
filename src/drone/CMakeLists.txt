@@ -29,7 +29,9 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/dummy_script.py
   scripts/teleop.py
+  scripts/teleop_sim.py
   scripts/drone_pose.py
+  scripts/drone_pose_sim.py
   scripts/fin_angle.py
   scripts/fin_sim.py
   DESTINATION lib/${PROJECT_NAME}

@@ -15,17 +15,11 @@ class FinAngleNode(Node):
 
         self.angle_pub = self.create_publisher(JointState, "/fin_states", 10)
 
-        # self.tf_broadcaster = TransformBroadcaster(self)
-
         self.fin1 = 0.0
         self.fin2 = 0.0
         self.fin3 = 0.0
         self.fin4 = 0.0
 
-    #     self.create_timer(0.01, self.timer)
-
-    # def timer(self):
-    #     self.Fin_Angle_pub()
 
     def Fin_Angle_pub(self):
         msg = JointState()

@@ -25,11 +25,11 @@ Moving around:
 
 class TeleopNode(Node):
     def __init__(self):
-        super().__init__('teleop_node')
-        self.publisher_cmd = self.create_publisher(Twist, '/cmd_vel', 10)
+        super().__init__('teleop_sim_node')
+        self.publisher_cmd = self.create_publisher(Vector3, '/drone/velocity_setpoint', 10)
         self.settings = termios.tcgetattr(sys.stdin)
         
-        self.speed = 0.1 # m/s
+        self.speed = 1.0 # m/s
 
     def getKey(self):
         tty.setraw(sys.stdin.fileno())
@@ -37,6 +37,7 @@ class TeleopNode(Node):
         if rlist:
             key = sys.stdin.read(1)
 
+            # self.get_logger().info(f"bottone : {key}")
         else:
             key = ''
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.settings)
@@ -69,7 +70,7 @@ class TeleopNode(Node):
                 elif key == '\x03':
                     break
                 
-                twist = Twist()
+                twist = Vector3()
                 twist.x = target_vx
                 twist.y = target_vy
                 twist.z = target_vz
@@ -80,7 +81,7 @@ class TeleopNode(Node):
             print(e)
 
         finally:
-            twist = Twist()
+            twist = Vector3()
             self.publisher_cmd.publish(twist)
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.settings)
 
