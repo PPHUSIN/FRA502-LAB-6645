@@ -55,7 +55,7 @@
 ### ขอบเขตโครงการ
 
 1. ใช้ **ROS2** สำหรับส่งคำสั่งควบคุมการบิน
-2. ใช้ไมโครคอนโทรลเลอร์ **ESP32** ที่รัน **MicroROS** ในการควบคุม PID และการรักษาสมดุล
+2. ใช้ไมโครคอนโทรลเลอร์ **ESP32** ที่รัน **MicroROS** ในการควบคุม LQR และการรักษาสมดุล
 3. ระบบสื่อสารผ่าน **Wi-Fi Network / Local Network** โดยไม่ใช้ UART
 4. ใช้ **IMU** ในการวัด pitch, roll, yaw ของโดรน
 5. ใช้มอเตอร์ที่ปรับมุมเอียงได้ เพื่อสร้างการควบคุมแบบ **Thrust Vectoring**
@@ -1330,21 +1330,7 @@ ros2 run tf2_tools view_frames
 
 ---
 
-## 📸 Gallery
 
-### RVIZ2 Visualization
-![RVIZ2 Display](images/rviz2_display.png)
-
-### Prototype Testing
-![Prototype Drone](images/prototype_drone.png)
-
-### Flight Testing
-![Drone Flight](images/drone_flight.png)
-
-### Station Test
-![Test Stand](images/test_stand.png)
-
----
 
 ## 📚 References
 
