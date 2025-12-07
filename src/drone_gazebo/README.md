@@ -161,6 +161,7 @@ Lift = q * A_fin * CL_alpha * angle
 - **Yaw Torque**: τ_z = -F_lift × L_horz (All fins)
 
 ```
+```
 
 ## Technical Specifications
 
