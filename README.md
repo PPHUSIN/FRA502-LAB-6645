@@ -308,7 +308,7 @@ $$Q_{pos} = \text{diag}\left( \frac{1}{0.5^2}, \frac{1}{0.5^2}, \frac{1}{1^2}, \
 ## 🔧 Hardware Design
 
 ### Thrust Vane Mechanism
-
+![GIF demo](vector_drone.gif)
 ```
 ┌──────────────────────────────────────┐
 │      THRUST VANE FORCE               │
