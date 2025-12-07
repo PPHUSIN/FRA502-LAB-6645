@@ -388,7 +388,7 @@ $$Q_{pos} = \text{diag}\left( \frac{1}{0.5^2}, \frac{1}{0.5^2}, \frac{1}{1^2}, \
 |------|-----------|-------------|
 | `drone_pose_sim.py` | `drone_pose_node` | อ่านข้อมูล Odometry จาก Gazebo (`/odom`) แปลง quaternion เป็น euler แล้ว broadcast TF |
 | `fin_sim.py` | `fin_pose_node` | อ่าน TF ของ fins จาก Gazebo แล้ว broadcast TF สำหรับแต่ละ fin |
-| `teleop_sim.py` | `teleop_sim_node` | รับ keyboard input แล้ว publish velocity setpoint ไป Gazebo (`/drone/velocity_setpoint`) |
+| `teleop_sim.py` | `teleop_sim_node` | รับ keyboard input แล้ว publish velocity setpoint ให้โดรน (`/drone/velocity_setpoint`) |
 
 #### Simulation System Architecture
 
@@ -476,7 +476,7 @@ $$Q_{pos} = \text{diag}\left( \frac{1}{0.5^2}, \frac{1}{0.5^2}, \frac{1}{1^2}, \
 # Node: teleop_sim_node
 
 # Publishers
-/drone/velocity_setpoint    # Velocity commands (geometry_msgs/Vector3)
+/drone/velocity_setpoint    # Velocity setpoint for drone (geometry_msgs/Vector3)
 
 # Controls (World Frame):
 #   w : +X (Forward)    speed = 1.0 m/s
@@ -491,7 +491,7 @@ $$Q_{pos} = \text{diag}\left( \frac{1}{0.5^2}, \frac{1}{0.5^2}, \frac{1}{1^2}, \
 **หน้าที่หลัก:**
 - รับ keyboard input จาก user
 - Publish velocity setpoint เป็น `Vector3` message
-- ส่งไปยัง Gazebo controller
+- โดรนจะใช้ setpoint นี้เป็นเป้าหมายความเร็วในการควบคุม
 
 #### Simulation Topic Summary
 
@@ -499,7 +499,7 @@ $$Q_{pos} = \text{diag}\left( \frac{1}{0.5^2}, \frac{1}{0.5^2}, \frac{1}{1^2}, \
 |-------|-------------|-----------|------------|
 | `/odom` | nav_msgs/Odometry | **Gazebo** | drone_pose_sim |
 | `/tf` | tf2_msgs/TFMessage | drone_pose_sim, fin_sim, **Gazebo** | RVIZ2 |
-| `/drone/velocity_setpoint` | geometry_msgs/Vector3 | teleop_sim | **Gazebo** |
+| `/drone/velocity_setpoint` | geometry_msgs/Vector3 | teleop_sim | **Drone** (setpoint) |
 | `/robot_description` | std_msgs/String | robot_state_publisher | RVIZ2 |
 
 #### Running Simulation
@@ -539,7 +539,7 @@ ros2 topic echo /tf
 |------|-----------|--------|-------------|
 | `drone_pose.py` | `drone_pose_node` | ⚠️ **รอทดสอบ** | รับข้อมูล angle จาก ESP32 (`/drone/angle`) และ velocity (`/cmd_vel`) แล้ว broadcast TF |
 | `fin_angle.py` | `fin_angle_node` | ⚠️ **รอทดสอบ** | รับมุม fin จาก ESP32 (`/fin_angle`) แล้ว publish JointState (`/fin_states`) |
-| `teleop.py` | `teleop_node` | ⚠️ **รอทดสอบ** | รับ keyboard input แล้ว publish Twist ไป ESP32 (`/cmd_vel`) |
+| `teleop.py` | `teleop_node` | ⚠️ **รอทดสอบ** | รับ keyboard input แล้ว publish velocity setpoint ให้โดรน (`/cmd_vel`) |
 
 > ⚠️ **หมายเหตุ:** ไฟล์เหล่านี้ถูกสร้างไว้เพื่อเตรียมใช้งานกับ Real Hardware แต่ยังไม่ได้ทดสอบกับ ESP32 และ MicroROS จริง รอการพัฒนาใน Week 3-4
 
@@ -673,7 +673,7 @@ dt = 0.01s (100 Hz)  # Update rate for pose calculation
 # Node: teleop_node
 
 # Publishers
-/cmd_vel             # Twist messages for drone control
+/cmd_vel             # Velocity setpoint for drone (geometry_msgs/Twist)
 
 # Controls (World Frame):
 #   w : +X (Forward)    speed = 0.1 m/s
@@ -687,7 +687,8 @@ dt = 0.01s (100 Hz)  # Update rate for pose calculation
 
 **หน้าที่หลัก:**
 - รับ keyboard input
-- Publish Twist message ไป ESP32
+- Publish velocity setpoint เป็น Twist message
+- โดรนจะใช้ setpoint นี้เป็นเป้าหมายความเร็วในการควบคุม
 
 **ความแตกต่างจาก Simulation:**
 - ใช้ `Twist` message แทน `Vector3`
@@ -704,7 +705,7 @@ dt = 0.01s (100 Hz)  # Update rate for pose calculation
 | `/drone/status` | diagnostic_msgs/Status | **ESP32** | Monitor |
 | `/fin_angle` | std_msgs/Float64MultiArray | **ESP32** | fin_angle |
 | `/fin_states` | sensor_msgs/JointState | fin_angle | robot_state_publisher |
-| `/cmd_vel` | geometry_msgs/Twist | teleop | **ESP32**, drone_pose |
+| `/cmd_vel` | geometry_msgs/Twist | teleop | **Drone** (setpoint), drone_pose |
 | `/drone/setpoint` | geometry_msgs/Point | PC | **ESP32** |
 
 #### Running Real Hardware
@@ -751,7 +752,7 @@ ros2 topic echo /fin_angle
 | **Position Topic** | `/odom` | `/drone/angle` + integration |
 | **Fin Data Topic** | `/tf` (Gazebo) | `/fin_angle` (ESP32) |
 | **Control Input** | `/drone/velocity_setpoint` | `/cmd_vel` |
-| **Control Message** | `Vector3` | `Twist` |
+| **Control Message** | `Vector3` (velocity setpoint) | `Twist` (velocity setpoint) |
 | **Default Speed** | 1.0 m/s | 0.1 m/s |
 | **Communication** | Local ROS2 | Wi-Fi + MicroROS |
 | **RVIZ Config** | `rviz_launch.py` | `rviz_real_launch.py` |
@@ -775,7 +776,7 @@ ros2 topic echo /fin_angle
 ├─────────────────────────┼───────────────────────────────────────┤
 │ /drone/velocity_setpoint│ /cmd_vel                              │
 │ (geometry_msgs/Vector3) │ (geometry_msgs/Twist)                 │
-│ To: Gazebo Controller   │ To: ESP32 PID Controller              │
+│ To: Drone (setpoint)    │ To: Drone (setpoint)                  │
 ├─────────────────────────┼───────────────────────────────────────┤
 │ N/A                     │ /fin_states                           │
 │                         │ (sensor_msgs/JointState)              │
@@ -1012,11 +1013,11 @@ ros2 topic echo /fin_angle
 ros2 topic echo /cmd_vel
 ```
 
-### Control Commands
+### Control Commands (Velocity Setpoint)
 
 **🖥️ Simulation Teleop (teleop_sim.py):**
 ```
-Moving around (World Frame):
+Velocity Setpoint (World Frame):
    w : +X (Forward)     speed = 1.0 m/s
    s : -X (Backward)
    a : +Y (Left)
@@ -1028,7 +1029,7 @@ Moving around (World Frame):
 
 **🚁 Real Hardware Teleop (teleop.py):**
 ```
-Moving around (World Frame):
+Velocity Setpoint (World Frame):
    w : +X (Forward)     speed = 0.1 m/s (ช้ากว่าเพื่อความปลอดภัย)
    s : -X (Backward)
    a : +Y (Left)
@@ -1046,13 +1047,13 @@ ros2 topic list
 
 # === SIMULATION MODE ===
 ros2 topic echo /odom                    # Simulation position (Gazebo)
-ros2 topic echo /drone/velocity_setpoint # Simulation control input
+ros2 topic echo /drone/velocity_setpoint # Velocity setpoint to drone
 ros2 topic echo /tf                      # TF transforms
 
 # === REAL HARDWARE MODE ===
 ros2 topic echo /drone/angle             # Attitude from ESP32
 ros2 topic echo /fin_angle               # Fin angles from ESP32
-ros2 topic echo /cmd_vel                 # Control commands
+ros2 topic echo /cmd_vel                 # Velocity setpoint to drone
 ros2 topic echo /fin_states              # JointState for RVIZ
 
 # View TF tree
