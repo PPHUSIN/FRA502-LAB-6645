@@ -372,7 +372,7 @@ $$Q_{pos} = \text{diag}\left( \frac{1}{0.5^2}, \frac{1}{0.5^2}, \frac{1}{1^2}, \
 
 ## 🚀 ROS2 Implementation
 
-โปรเจกต์นี้มี 2 โหมดการทำงานที่ใช้ **Python files**, topics และ data flow ที่แตกต่างกัน:
+ตอนนี้โปรเจกต์แยกเป็น 2 ส่วนการทำงานที่ใช้ **Python files**, topics และ data flow ที่แตกต่างกัน:
 
 ---
 
