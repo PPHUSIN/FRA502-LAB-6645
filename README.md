@@ -1064,7 +1064,7 @@ MicroROSConfig ros_config = {
 ### ตั้งค่าแนว IMU
 ```cpp
 // ใน setup():
-imu.setRotation(ROTATION_CUSTOM_3);  // เปลี่ยนตามการติดตั้ง
+imu.setRotation(ROTATION_CUSTOM_0);  // เปลี่ยนตามการติดตั้ง
 imu.zeroOrientation();  // ตั้งศูนย์บนพื้นราบ
 ```
 
